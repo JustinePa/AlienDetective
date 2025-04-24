@@ -12,7 +12,8 @@ graphics.off()
 # LOAD PACKAGES
 ############################################################################################
 cat(">>> [INIT] Loading packages...\n")
-.libPaths(c("/cfs/klemming/home/p/pagnier/Rlibs", "/cfs/klemming/pdc/software/dardel/23.12/eb/software/R/4.4.1-cpeGNU-23.12/lib64/R/library"))
+# Library path for use on HPC
+#.libPaths(c("/cfs/klemming/home/p/pagnier/Rlibs", "/cfs/klemming/pdc/software/dardel/23.12/eb/software/R/4.4.1-cpeGNU-23.12/lib64/R/library"))
 library("gdistance")
 library("dplyr")
 require("geosphere")
@@ -39,12 +40,13 @@ library("FRK")
 
 
 
-setwd("/cfs/klemming/home/p/pagnier/testAD")
+#setwd("/cfs/klemming/home/p/pagnier/testAD")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 library(sf)
 
 cat(">>> [MAP] Loading land polygons...\n")
-land_polygons <- st_read("/cfs/klemming/home/p/pagnier/testAD/land_polygons.shp")
+land_polygons <- st_read("Input/land_polygons.shp")
 print(st_crs(land_polygons))
 st_crs(land_polygons) <- 4326
 
@@ -64,13 +66,13 @@ getwd()
 
 # Default values for testing locally
 if (length(args) == 0) {
-  input_species_file <- "Species_Location.csv"
-  input_coordinates_file <- "Coordinates.csv"
+  input_species_file <- "Input/Species_Location.csv"
+  input_coordinates_file <- "Input/Coordinates.csv"
   output_directory <- "Output_calculations"
 }
 
 # Read data
-df <- read.csv(input_species_file)
+df <- read.csv(input_species_file, sep = ",")
 Coordinates <- read.csv(input_coordinates_file)
 
 # Ensure required directories exist
@@ -97,8 +99,8 @@ if (!dir.exists(output_fly_dir)) {
 # Set working directory to directory where the R-script is saved
 #setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 # Read a species list and coordinates
-df <- read.csv(input_species_file)
-Coordinates <- read.csv(input_coordinates_file)
+#df <- read.csv(input_species_file)
+#Coordinates <- read.csv(input_coordinates_file)
 
 
 ######
@@ -115,7 +117,7 @@ long <- pivot_longer(df, !Specieslist)
 long <- long[long$value > 0, ]
 
 # Specify the species name you want to run the code for
-target_species <- c("Squalus blainville", "Myrianida langerhansi")  # Replace with the actual name
+target_species <- c("Amphibalanus amphitrite")  # Replace with the actual name
 
 # Filter long to include only target_species
 long <- long[long$Specieslist %in% target_species, ] # Remove this part of code if not selecting species manually
