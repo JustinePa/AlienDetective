@@ -66,14 +66,14 @@ getwd()
 
 # Default values for testing locally
 if (length(args) == 0) {
-  input_species_file <- "Input/Species_Location.csv"
-  input_coordinates_file <- "Input/Coordinates.csv"
+  input_species_file <- "Input/Species_Location_NIS.csv"
+  input_coordinates_file <- "Input/Coordinates_NIS.csv"
   output_directory <- "Output_calculations"
 }
 
 # Read data
-df <- read.csv(input_species_file, sep = ",")
-Coordinates <- read.csv(input_coordinates_file)
+df <- read.csv(input_species_file, sep = ";")
+Coordinates <- read.csv(input_coordinates_file, sep = ";")
 
 # Ensure required directories exist
 if (!dir.exists("OccurrenceData")) {
@@ -112,8 +112,10 @@ if (!dir.exists(output_fly_dir)) {
 # RESHAPE DF WITH LOCATIONS AND SPECIES FROM WIDE TO LONG FORMAT
 ############################################################################################
 
-long <- pivot_longer(df, !Specieslist)
 # from tidyr package, reshape df from wide to long format
+long <- pivot_longer(df, !Specieslist)
+
+# Only retain values higher than 0
 long <- long[long$value > 0, ]
 
 # Specify the species name you want to run the code for
