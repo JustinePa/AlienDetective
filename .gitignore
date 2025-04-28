@@ -1,5 +1,6 @@
 .Rhistory
-Input/land_polygons.*
+.RData
 .RDataTmp
+Input/land_polygons.*
 OccurrenceData/
 Output_calculations/
