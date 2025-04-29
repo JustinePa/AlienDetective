@@ -43,10 +43,10 @@ library("FRK")
 #  install.packages("devtools")
 #}
 
-
-
-#setwd("/cfs/klemming/home/p/pagnier/testAD")
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+# Determine location script and setwd
+args <- commandArgs(trailingOnly = FALSE)
+script_path <- normalizePath(sub("--file=", "", args[grep("--file=", args)]))
+setwd(dirname(script_path))
 
 library(sf)
 
