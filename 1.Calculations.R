@@ -10,7 +10,7 @@ graphics.off()
 # Load Packages
 # ------------------------------------------------------------------------------
 cat(">>> [INIT] Loading packages...\n")
-.libPaths(c("/cfs/klemming/home/p/pagnier/Rlibs",
+.libPaths(c("/cfs/klemming/home/m/mattgiel/Rlibs",
             "/cfs/klemming/pdc/software/dardel/23.12/eb/software/R/4.4.1-cpeGNU-23.12/lib64/R/library"))
 suppressMessages({
   library(gdistance)
@@ -29,11 +29,11 @@ suppressMessages({
 # ------------------------------------------------------------------------------
 # Set paths and parameters
 # ------------------------------------------------------------------------------
-setwd("/cfs/klemming/home/p/pagnier/testAD")
-input_species_file <- "Species_Location.csv"
-input_coordinates_file <- "Coordinates.csv"
+setwd("/cfs/klemming/home/m/mattgiel/Alien_Detective")
+input_species_file <- "Input/Species_Location_NIS.csv"
+input_coordinates_file <- "Input/Coordinates_NIS.csv"
 output_directory <- "Output_calculations"
-land_shapefile <- "land_polygons.shp"
+land_shapefile <- "Input/land_polygons.shp"
 
 # Create required output dirs
 dir.create("OccurrenceData", showWarnings = FALSE)
@@ -45,8 +45,8 @@ dir.create(file.path(output_directory, "errors"), recursive = TRUE, showWarnings
 # Load data
 # ------------------------------------------------------------------------------
 cat(">>> [DATA] Reading species and coordinate files...\n")
-df <- read.csv(input_species_file)
-Coordinates <- read.csv(input_coordinates_file)
+df <- read.csv(input_species_file, sep = ";")
+Coordinates <- read.csv(input_coordinates_file, sep = ";")
 
 # Convert species-location to long format
 long <- df %>%
@@ -54,7 +54,7 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Squalus blainville", "Myrianida langerhansi")
+target_species <- c("Amphibalanus amphitrite", "Amphibalanus eburneus")
 long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
