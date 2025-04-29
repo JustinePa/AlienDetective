@@ -199,7 +199,6 @@ foreach(species_name = unique(long$Specieslist),
       }
     }
   }
-  res_total <- 0  
   if (length(processed_data) > 0) {
     res_total <- do.call(rbind, processed_data)
     print(paste0("Total NA values in res_total: ", sum(is.na(res_total))))
