@@ -12,6 +12,9 @@
 # Load required modules
 module load PDC
 module load R/4.4.1-cpeGNU-23.12
+module load proj
+module load gdal
+module load udunits
 R --version
 
 # Set custom R library path
