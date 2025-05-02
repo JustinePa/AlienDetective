@@ -211,7 +211,7 @@ Calculation_seadistance <- function(species_name, species_location){
 
   # for loop to iterate over OccurrenceData
   for (row in 1:nrow(OccurrenceData)) {
-    print(paste0("Calculating latitude: ", OccurrenceData[row, 3], " and longitude: ", OccurrenceData[row, 2]))
+    print(paste0("Calculating latitude: ", OccurrenceData[row, 2], " and longitude: ", OccurrenceData[row, 1]))
     print(paste0("for ", species_location, " latitude, longitude: ", samplelocation[,1], " ", samplelocation[,2]))
 
     #################
