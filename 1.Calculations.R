@@ -24,7 +24,14 @@ suppressMessages({
   library(sp)
   library(raster)
   library(rnaturalearth)
+  library(doParallel)
+  library(foreach)
 })
+
+# ------------------------------------------------------------------------------
+# Setup parallelisation
+# ------------------------------------------------------------------------------
+registerDoParallel(cores=10)
 
 # ------------------------------------------------------------------------------
 # Set paths and parameters
@@ -114,7 +121,10 @@ fetch_gbif_occurrences <- function(species_name, required_columns) {
 
 required_columns <- c("decimalLongitude", "decimalLatitude", "year", "month", "country")
 
-for (species in unique(long$Specieslist)) {
+#for (species in unique(long$Specieslist)) {
+foreach(species = unique(long$Specieslist),
+        .packages = c("rgbif"),
+        .export = c("ensure_columns", "fetch_gbif_occurrences")) %dopar% {
   file_path <- file.path("OccurrenceData", paste0(species, ".csv"))
   if (file.exists(file_path)) {
     cat(">>> [SKIP] File already exists for ", species, "\n")
@@ -360,7 +370,15 @@ Calculation_seadistance <- function(species_name, species_location){
 
 }
 
-results <- lapply(seq_len(nrow(long)), function(i) Calculation_seadistance(long$Specieslist[i], long$Location[i]))
+#results <- lapply(seq_len(nrow(long)), function(i) Calculation_seadistance(long$Specieslist[i], long$Location[i]))
+
+results <- foreach(i = seq_len(nrow(long)),
+                   .packages = c("rnaturalearth", "raster", "gdistance", "sp", "geosphere", "sf"),
+                   .export = c("Calculation_seadistance", "Coordinates")) %dopar% {
+                     Calculation_seadistance(long$Specieslist[i], long$Location[i])
+                   }
+
+stopImplicitCluster()
 
 # ------------------------------------------------------------------------------
 # Done
