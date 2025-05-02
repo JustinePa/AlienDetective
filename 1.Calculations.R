@@ -31,7 +31,7 @@ suppressMessages({
 # ------------------------------------------------------------------------------
 # Setup parallelisation
 # ------------------------------------------------------------------------------
-registerDoParallel(cores=10)
+# registerDoParallel(cores=10)
 
 # ------------------------------------------------------------------------------
 # Set paths and parameters
@@ -61,8 +61,8 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Amphibalanus amphitrite", "Amphibalanus eburneus")
-long <- long %>% filter(Specieslist %in% target_species)
+# target_species <- c("Amphibalanus amphitrite", "Amphibalanus eburneus")
+# long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
 # Load land polygons for sea distance masking
@@ -121,10 +121,10 @@ fetch_gbif_occurrences <- function(species_name, required_columns) {
 
 required_columns <- c("decimalLongitude", "decimalLatitude", "year", "month", "country")
 
-#for (species in unique(long$Specieslist)) {
-foreach(species = unique(long$Specieslist),
-        .packages = c("rgbif"),
-        .export = c("ensure_columns", "fetch_gbif_occurrences")) %dopar% {
+for (species in unique(long$Specieslist)) {
+# foreach(species = unique(long$Specieslist),
+#         .packages = c("rgbif"),
+#         .export = c("ensure_columns", "fetch_gbif_occurrences")) %dopar% {
   file_path <- file.path("OccurrenceData", paste0(species, ".csv"))
   if (file.exists(file_path)) {
     cat(">>> [SKIP] File already exists for ", species, "\n")
@@ -234,12 +234,12 @@ Calculation_seadistance <- function(species_name, species_location){
 
     # Define points using correct projection
     point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
-    point2 <- SpatialPoints(cbind(OccurrenceData[row, 2], OccurrenceData[row, 3]), proj4string = CRS(proj4string(r)))
+    point2 <- SpatialPoints(cbind(OccurrenceData[row, 1], OccurrenceData[row, 2]), proj4string = CRS(proj4string(r)))
 
     # Check if the OccurrenceData point is on land, if so, skip this iteration
     if (!is.na(raster::extract(r, point2))) {
-      add_error_message(paste("Point on land detected for ", species_name, " at ", OccurrenceData[row, 2], "", OccurrenceData[row, 3]))
-      cat("Point on land detected for species at ", OccurrenceData[row, 2], OccurrenceData[row, 3], "\n")
+      add_error_message(paste("Point on land detected for ", species_name, " at ", OccurrenceData[row, 1], "", OccurrenceData[row, 2]))
+      cat("Point on land detected for species at ", OccurrenceData[row, 1], OccurrenceData[row, 2], "\n")
       sea_distances <- append(sea_distances, Inf)
       next
     }
@@ -301,11 +301,11 @@ Calculation_seadistance <- function(species_name, species_location){
     # for this calculation, longitude comes first and then latitude!!!
     # Define points using correct projection
     point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
-    point2 <- SpatialPoints(cbind(OccurrenceData[row, 2], OccurrenceData[row, 3]), proj4string = CRS(proj4string(r)))
+    point2 <- SpatialPoints(cbind(OccurrenceData[row, 1], OccurrenceData[row, 2]), proj4string = CRS(proj4string(r)))
 
     # Check if the OccurrenceData point is on land
     if (!is.na(raster::extract(r, point2))) {
-      add_error_message(paste("Point on land detected for ", species_name, " at ", OccurrenceData[row, 2], "", OccurrenceData[row, 3]))
+      add_error_message(paste("Point on land detected for ", species_name, " at ", OccurrenceData[row, 1], "", OccurrenceData[row, 2]))
       flying_distances <- append(flying_distances, Inf)
       next
     }
@@ -370,15 +370,15 @@ Calculation_seadistance <- function(species_name, species_location){
 
 }
 
-#results <- lapply(seq_len(nrow(long)), function(i) Calculation_seadistance(long$Specieslist[i], long$Location[i]))
+results <- lapply(seq_len(nrow(long)), function(i) Calculation_seadistance(long$Specieslist[i], long$Location[i]))
 
-results <- foreach(i = seq_len(nrow(long)),
-                   .packages = c("rnaturalearth", "raster", "gdistance", "sp", "geosphere", "sf"),
-                   .export = c("Calculation_seadistance", "Coordinates")) %dopar% {
-                     Calculation_seadistance(long$Specieslist[i], long$Location[i])
-                   }
+# results <- foreach(i = seq_len(nrow(long)),
+#                    .packages = c("rnaturalearth", "raster", "gdistance", "sp", "geosphere", "sf"),
+#                    .export = c("Calculation_seadistance", "Coordinates")) %dopar% {
+#                      Calculation_seadistance(long$Specieslist[i], long$Location[i])
+#                    }
 
-stopImplicitCluster()
+# stopImplicitCluster()
 
 # ------------------------------------------------------------------------------
 # Done
