@@ -61,7 +61,7 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Amphibalanus eburneus")
+target_species <- c("Potamopyrgus antipodarum")
 long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
@@ -335,13 +335,13 @@ Calculation_seadistance <- function(species_name, species_location){
     }
   }
   ### CHECKS IF NECESSARY ###
-  cat("Length of flying_distances: ", length(flying_distances), "\n")
-  cat("content of flying_distances: ", flying_distances, "\n")
-  cat("Length of sea_distances: ", length(sea_distances), "\n")
-  cat("content of sea_distances: ", sea_distances, "\n")
-  cat("Length of OccurrenceData$Year: ", length(OccurrenceData$Year), "\n")
-  cat("Length of OccurrenceData$Month: ", length(OccurrenceData$Month), "\n")
-  cat("Length of OccurrenceData$Country: ", length(OccurrenceData$Country), "\n")
+  # cat("Length of flying_distances: ", length(flying_distances), "\n")
+  # cat("content of flying_distances: ", flying_distances, "\n")
+  # cat("Length of sea_distances: ", length(sea_distances), "\n")
+  # cat("content of sea_distances: ", sea_distances, "\n")
+  # cat("Length of OccurrenceData$Year: ", length(OccurrenceData$Year), "\n")
+  # cat("Length of OccurrenceData$Month: ", length(OccurrenceData$Month), "\n")
+  # cat("Length of OccurrenceData$Country: ", length(OccurrenceData$Country), "\n")
 
   # Create sea data frame
   sea_data <- create_data_frame(sea_distances, OccurrenceData$Year, OccurrenceData$Month, OccurrenceData$Country)
