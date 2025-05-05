@@ -61,8 +61,8 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-# target_species <- c("Amphibalanus amphitrite", "Amphibalanus eburneus")
-# long <- long %>% filter(Specieslist %in% target_species)
+target_species <- c("Amphibalanus eburneus")
+long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
 # Load land polygons for sea distance masking
@@ -335,19 +335,19 @@ Calculation_seadistance <- function(species_name, species_location){
     }
   }
   ### CHECKS IF NECESSARY ###
-  #cat("Length of flying_distances: ", length(flying_distances), "\n")
-  #cat("content of flying_distances: ", flying_distances, "\n")
-  #cat("Length of sea_distances: ", length(sea_distances), "\n")
-  #cat("content of sea_distances: ", sea_distances, "\n")
-  #cat("Length of OccurrenceData$year: ", length(OccurrenceData$year), "\n")
-  #cat("Length of OccurrenceData$month: ", length(OccurrenceData$month), "\n")
-  #cat("Length of OccurrenceData$country: ", length(OccurrenceData$country), "\n")
+  cat("Length of flying_distances: ", length(flying_distances), "\n")
+  cat("content of flying_distances: ", flying_distances, "\n")
+  cat("Length of sea_distances: ", length(sea_distances), "\n")
+  cat("content of sea_distances: ", sea_distances, "\n")
+  cat("Length of OccurrenceData$Year: ", length(OccurrenceData$Year), "\n")
+  cat("Length of OccurrenceData$Month: ", length(OccurrenceData$Month), "\n")
+  cat("Length of OccurrenceData$Country: ", length(OccurrenceData$Country), "\n")
 
   # Create sea data frame
-  sea_data <- create_data_frame(sea_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
+  sea_data <- create_data_frame(sea_distances, OccurrenceData$Year, OccurrenceData$Month, OccurrenceData$Country)
 
   # Create fly data frame
-  fly_data <- create_data_frame(flying_distances, OccurrenceData$year, OccurrenceData$month, OccurrenceData$country)
+  fly_data <- create_data_frame(flying_distances, OccurrenceData$Year, OccurrenceData$Month, OccurrenceData$Country)
 
   # Define file paths
   sea_distance_file <- paste0("Output_calculations/sea_distances/", species_name, "_distancesTo_", species_location, ".csv")
