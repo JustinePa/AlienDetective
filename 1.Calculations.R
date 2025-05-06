@@ -270,8 +270,8 @@ Calculation_seadistance <- function(species_name, species_location){
     
     sea_distance <- tryCatch({
       # Coerce points to SpatialPointsDataFrame for compatibility with gdistance
-      point1_df <- SpatialPointsDataFrame(coords = point1, data = data.frame(id = 1), proj4string = CRS(proj4string(r)))
-      point2_df <- SpatialPointsDataFrame(coords = point2, data = data.frame(id = 2), proj4string = CRS(proj4string(r)))
+      point1_df <- SpatialPointsDataFrame(coords = point1, data = data.frame(id = 1))
+      point2_df <- SpatialPointsDataFrame(coords = point2, data = data.frame(id = 2))
       # Compute cost distance
       cost_distance <- costDistance(transitMatrix, point1_df, point2_df)
       # Calculate the shortest path
