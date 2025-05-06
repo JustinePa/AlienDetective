@@ -61,7 +61,7 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Potamopyrgus antipodarum")
+target_species <- c("Eucheilota menoni")
 long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ Calculation_seadistance <- function(species_name, species_location){
   ##########################################################################
 
   # Load world data and prepare the raster
-  world <- ne_countries(scale = "medium", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
+  world <- ne_countries(scale = "large", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
   r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
   r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
   costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
@@ -235,15 +235,39 @@ Calculation_seadistance <- function(species_name, species_location){
     # Define points using correct projection
     point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
     point2 <- SpatialPoints(cbind(OccurrenceData[row, 1], OccurrenceData[row, 2]), proj4string = CRS(proj4string(r)))
-
-    # Check if the OccurrenceData point is on land, if so, skip this iteration
+    
+    # Check if the OccurrenceData point is on land, if so, move to closest sea
     if (!is.na(raster::extract(r, point2))) {
-      add_error_message(paste("Point on land detected for ", species_name, " at ", OccurrenceData[row, 1], "", OccurrenceData[row, 2]))
-      cat("Point on land detected for species at ", OccurrenceData[row, 1], OccurrenceData[row, 2], "\n")
-      sea_distances <- append(sea_distances, Inf)
-      next
+      cat("Point on land detected, searching for nearest connected sea point...\n")
+      
+      # Get the transition matrix (sparse)
+      trans_matrix <- transitionMatrix(transitMatrix)
+      
+      # Get all cells that are connected (have non-zero transitions)
+      connected_cells <- which(rowSums(trans_matrix != 0) > 0)
+      connected_coords <- xyFromCell(r, connected_cells)
+      
+      # Keep only those that fall on sea 
+      is_sea <- is.na(raster::extract(r, connected_coords))
+      sea_coords <- connected_coords[is_sea, , drop = FALSE]
+      
+      if (nrow(sea_coords) == 0) {
+        warning("No valid connected sea cells found.")
+      } else {
+        # Compute geodesic distance to all valid sea coords
+        dists <- geosphere::distVincentySphere(coordinates(point2), sea_coords)
+        
+        # Find the index of the closest sea coordinate
+        nearest_idx <- which.min(dists)
+        
+        # Update point2 to the closest connected sea coordinate
+        new_coords <- sea_coords[nearest_idx, , drop = FALSE]
+        point2 <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
+        
+        cat("Moved point to nearest connected sea at: ", new_coords[1], new_coords[2], "\n")
+      }
     }
-
+    
     sea_distance <- tryCatch({
       # Coerce points to SpatialPointsDataFrame for compatibility with gdistance
       point1_df <- SpatialPointsDataFrame(coords = point1, data = data.frame(id = 1), proj4string = CRS(proj4string(r)))
