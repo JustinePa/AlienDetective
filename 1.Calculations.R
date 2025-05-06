@@ -218,17 +218,17 @@ Calculation_seadistance <- function(species_name, species_location){
     ## SEA DISTANCE##
     #################
 
-    transition_matrix <- "transitMatrix.rds"
+    transition_matrix <- "Input/transitMatrix.rds"
     if (!file.exists(transition_matrix)) {
       # Create a transition object for adjacent cells
       transitMatrix <- transition(costs, transitionFunction = function(x) 1/mean(x), directions = 16)
       # Set infinite costs to NA to prevent travel through these cells
       transitMatrix <- geoCorrection(transitMatrix, scl = TRUE)
       # Save/Load transition matrix
-      saveRDS(transitMatrix, file = "transitMatrix.rds")
+      saveRDS(transitMatrix, file = "Input/transitMatrix.rds")
 
     } else {
-      transitMatrix <- readRDS(file = "transitMatrix.rds")
+      transitMatrix <- readRDS(file = "Input/transitMatrix.rds")
     }
 
 
