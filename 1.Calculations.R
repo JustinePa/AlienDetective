@@ -40,7 +40,7 @@ setwd("/cfs/klemming/home/m/mattgiel/Alien_Detective")
 input_species_file <- "Input/Species_Location_NIS.csv"
 input_coordinates_file <- "Input/Coordinates_NIS.csv"
 output_directory <- "Output_calculations"
-land_shapefile <- "Input/land_polygons.shp"
+land_shapefile <- "Input/land_polygons/land_polygons.shp"
 
 # Create required output dirs
 dir.create("OccurrenceData", showWarnings = FALSE)
