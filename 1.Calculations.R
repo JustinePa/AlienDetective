@@ -61,7 +61,7 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Paracerceis sculpta")
+target_species <- c("Amphibalanus eburneus")
 long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
@@ -146,50 +146,70 @@ for (species in unique(long$Specieslist)) {
 # ------------------------------------------------------------------------------
 # Checking if input Coordinares are on land, if so, move to sea
 # ------------------------------------------------------------------------------
+# Load world data and prepare the raster
+world <- ne_countries(scale = "large", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
+r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
+r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
+costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
+costs[is.na(costs)] <- 1    # Replace NA values in the 'costs' raster with 1
+
+transition_matrix <- "Input/transitMatrix.rds"
+if (!file.exists(transition_matrix)) {
+  # Create a transition object for adjacent cells
+  transitMatrix <- transition(costs, transitionFunction = function(x) 1/mean(x), directions = 16)
+  # Set infinite costs to NA to prevent travel through these cells
+  transitMatrix <- geoCorrection(transitMatrix, scl = TRUE)
+  # Save/Load transition matrix
+  saveRDS(transitMatrix, file = "Input/transitMatrix.rds")
+
+} else {
+  transitMatrix <- readRDS(file = "Input/transitMatrix.rds")
+}
+
 cat(">>> [DATA] Checking if input Coordinates are in sea ...")
 for (i in 1:nrow(Coordinates)) {
   cat("\nChecking coordinates for", Coordinates$Observatory.ID[i], ":", Coordinates$Longitude[i], Coordinates$Latitude[i], "\n")
   # Extract coordinates for the current row
   longitude <- as.numeric(gsub(",", ".", Coordinates$Longitude[i]))
   latitude <- as.numeric(gsub(",", ".", Coordinates$Latitude[i]))
-  
+
   # Define the point
   point <- SpatialPoints(cbind(longitude, latitude), proj4string = CRS(proj4string(r)))
-  
+
   # Check if the point is on land or sea
   if (!is.na(raster::extract(r, point))) {
     cat("> Point on land detected, searching for nearest connected sea point...\n")
-    
+
     # Get the transition matrix (sparse)
     trans_matrix <- transitionMatrix(transitMatrix)
-    
+
     # Get all cells that are connected (non-zero transitions)
     connected_cells <- which(rowSums(trans_matrix != 0) > 0)
     connected_coords <- xyFromCell(r, connected_cells)
-    
-    # Keep only those that fall on sea 
+
+    # Keep only those that fall on sea
     is_sea <- is.na(raster::extract(r, connected_coords))
     sea_coords <- connected_coords[is_sea, , drop = FALSE]
-    
+
     if (nrow(sea_coords) == 0) {
       warning("No valid connected sea cells found.")
     } else {
       # Compute geodesic distance to all valid sea coords
       dists <- geosphere::distVincentySphere(coordinates(point), sea_coords)
-      
+
       # Find the index of the closest sea coordinate
       nearest_idx <- which.min(dists)
-      
+
       # Update point to the closest connected sea coordinate
       new_coords <- sea_coords[nearest_idx, , drop = FALSE]
       point <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
-      
+
       cat("> Moved point to nearest connected sea at: ", new_coords[1], new_coords[2], "\n")
     }
   } else {
     cat("> Point is already in sea.\n")
   }
-  
+
   # Update the dataframe with the new coordinates (if moved)
   Coordinates$Longitude[i] <- coordinates(point)[1]
   Coordinates$Latitude[i] <- coordinates(point)[2]
@@ -246,15 +266,6 @@ Calculation_seadistance <- function(species_name, species_location){
   ##########################################################################
   # DISTANCES CALCULATION
   ##########################################################################
-
-  # Load world data and prepare the raster
-  world <- ne_countries(scale = "large", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
-  r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
-  r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
-  costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
-  costs[is.na(costs)] <- 1    # Replace NA values in the 'costs' raster with 1
-
-
   # Initialize lists to store distances
   sea_distances <- c()
   flying_distances <- c()
@@ -267,21 +278,6 @@ Calculation_seadistance <- function(species_name, species_location){
     #################
     ## SEA DISTANCE##
     #################
-
-    transition_matrix <- "Input/transitMatrix.rds"
-    if (!file.exists(transition_matrix)) {
-      # Create a transition object for adjacent cells
-      transitMatrix <- transition(costs, transitionFunction = function(x) 1/mean(x), directions = 16)
-      # Set infinite costs to NA to prevent travel through these cells
-      transitMatrix <- geoCorrection(transitMatrix, scl = TRUE)
-      # Save/Load transition matrix
-      saveRDS(transitMatrix, file = "Input/transitMatrix.rds")
-
-    } else {
-      transitMatrix <- readRDS(file = "Input/transitMatrix.rds")
-    }
-
-
     # Define points using correct projection
     point1 <- SpatialPoints(cbind(samplelocation$Longitude, samplelocation$Latitude), proj4string = CRS(proj4string(r)))
     point2 <- SpatialPoints(cbind(OccurrenceData[row, 1], OccurrenceData[row, 2]), proj4string = CRS(proj4string(r)))
