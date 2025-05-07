@@ -146,7 +146,9 @@ for (species in unique(long$Specieslist)) {
 # ------------------------------------------------------------------------------
 # Checking if input Coordinares are on land, if so, move to sea
 # ------------------------------------------------------------------------------
+cat(">>> [DATA] Checking if input Coordinates are in sea ...")
 for (i in 1:nrow(Coordinates)) {
+  cat("\nChecking coordinates for", Coordinates$Observatory.ID[i], ":", Coordinates$Longitude[i], Coordinates$Latitude[i], "\n")
   # Extract coordinates for the current row
   longitude <- as.numeric(gsub(",", ".", Coordinates$Longitude[i]))
   latitude <- as.numeric(gsub(",", ".", Coordinates$Latitude[i]))
@@ -156,7 +158,7 @@ for (i in 1:nrow(Coordinates)) {
   
   # Check if the point is on land or sea
   if (!is.na(raster::extract(r, point))) {
-    cat("Point on land detected, searching for nearest connected sea point...\n")
+    cat("> Point on land detected, searching for nearest connected sea point...\n")
     
     # Get the transition matrix (sparse)
     trans_matrix <- transitionMatrix(transitMatrix)
@@ -182,16 +184,17 @@ for (i in 1:nrow(Coordinates)) {
       new_coords <- sea_coords[nearest_idx, , drop = FALSE]
       point <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
       
-      cat("Moved point to nearest connected sea at: ", new_coords[1], new_coords[2], "\n")
+      cat("> Moved point to nearest connected sea at: ", new_coords[1], new_coords[2], "\n")
     }
   } else {
-    cat("Point is already on sea.\n")
+    cat("> Point is already in sea.\n")
   }
   
   # Update the dataframe with the new coordinates (if moved)
   Coordinates$Longitude[i] <- coordinates(point)[1]
   Coordinates$Latitude[i] <- coordinates(point)[2]
 }
+cat(">>> [DONE] All coordinates updated to nearest sea point")
 
 # ------------------------------------------------------------------------------
 # Distance Calculation (Put your existing function here)
