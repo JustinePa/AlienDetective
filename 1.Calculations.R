@@ -61,7 +61,7 @@ long <- df %>%
   filter(Presence > 0)
 
 # Optionally subset species for testing
-target_species <- c("Eucheilota menoni")
+target_species <- c("Paracerceis sculpta")
 long <- long %>% filter(Specieslist %in% target_species)
 
 # ------------------------------------------------------------------------------
@@ -268,6 +268,38 @@ Calculation_seadistance <- function(species_name, species_location){
       }
     }
     
+    # Check if the specieslocation point is on land, if so, move to closest sea
+    if (!is.na(raster::extract(r, point1))) {
+      cat("Point on land detected, searching for nearest connected sea point...\n")
+      
+      # Get the transition matrix (sparse)
+      trans_matrix <- transitionMatrix(transitMatrix)
+      
+      # Get all cells that are connected (have non-zero transitions)
+      connected_cells <- which(rowSums(trans_matrix != 0) > 0)
+      connected_coords <- xyFromCell(r, connected_cells)
+      
+      # Keep only those that fall on sea 
+      is_sea <- is.na(raster::extract(r, connected_coords))
+      sea_coords <- connected_coords[is_sea, , drop = FALSE]
+      
+      if (nrow(sea_coords) == 0) {
+        warning("No valid connected sea cells found.")
+      } else {
+        # Compute geodesic distance to all valid sea coords
+        dists <- geosphere::distVincentySphere(coordinates(point1), sea_coords)
+        
+        # Find the index of the closest sea coordinate
+        nearest_idx <- which.min(dists)
+        
+        # Update point2 to the closest connected sea coordinate
+        new_coords <- sea_coords[nearest_idx, , drop = FALSE]
+        point1 <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
+        
+        cat("Moved point to nearest connected sea at: ", new_coords[1], new_coords[2], "\n")
+      }
+    }
+    
     sea_distance <- tryCatch({
       # Coerce points to SpatialPointsDataFrame for compatibility with gdistance
       point1_df <- SpatialPointsDataFrame(coords = point1, data = data.frame(id = 1))
@@ -314,7 +346,7 @@ Calculation_seadistance <- function(species_name, species_location){
 
     }, error = function(e) {
       add_error_message(paste("An error occurred during sea distance calculation for", species_name, "in", species_location, ":", e$message))
-      return(NA)
+      sea_distances <<- append(sea_distances, NA)
 
     }) # trycatch() closed
   } # iteration over OccurrenceData stopped
@@ -359,7 +391,6 @@ Calculation_seadistance <- function(species_name, species_location){
     }
   }
   ### CHECKS IF NECESSARY ###
-  # cat("Length of flying_distances: ", length(flying_distances), "\n")
   # cat("content of flying_distances: ", flying_distances, "\n")
   # cat("Length of sea_distances: ", length(sea_distances), "\n")
   # cat("content of sea_distances: ", sea_distances, "\n")
