@@ -3,5 +3,3 @@
 .RDataTmp*
 transitMatrix.rds
 Input/land_polygons/*
-OccurrenceData/
-Output_calculations/
