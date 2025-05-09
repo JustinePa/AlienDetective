@@ -144,14 +144,19 @@ for (species in unique(long$Specieslist)) {
 }
 
 # ------------------------------------------------------------------------------
-# Checking if input Coordinares are on land, if so, move to sea
+# Set up map
 # ------------------------------------------------------------------------------
-# Load world data and prepare the raster
-world <- ne_countries(scale = "large", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
-r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
-r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
-costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
-costs[is.na(costs)] <- 1    # Replace NA values in the 'costs' raster with 1
+# Test premade map
+costs <- raster("Input/sea_cost_raster.tif")
+europe <- extent(-30, 50, 30, 75)
+costs <- crop(costs, europe)
+
+# # Load world data and prepare the raster
+# world <- ne_countries(scale = "large", returnclass = "sf")  # Load medium or large scale natural earth countries as an sf (simple features) object
+# r <- raster(extent(-180, 180, -90, 90), res = 0.1)           # Create a raster object with a global extent and resolution of 0.1 degrees
+# r <- rasterize(world, r, field = 1, fun = max, na.rm = TRUE) # Rasterize the 'world' sf object, assigning a value of 1 to cells with country presence
+# costs <- reclassify(r, cbind(1, Inf))                        # Reclassify the raster: convert all values of 1 to Inf (infinity)
+# costs[is.na(costs)] <- 1    # Replace NA values in the 'costs' raster with 1
 
 transition_matrix <- "Input/transitMatrix.rds"
 if (!file.exists(transition_matrix)) {
@@ -166,6 +171,9 @@ if (!file.exists(transition_matrix)) {
   transitMatrix <- readRDS(file = "Input/transitMatrix.rds")
 }
 
+# ------------------------------------------------------------------------------
+# Checking if input Coordinares are on land, if so, move to sea
+# ------------------------------------------------------------------------------
 cat(">>> [DATA] Checking if input Coordinates are in sea ...")
 for (i in 1:nrow(Coordinates)) {
   cat("\nChecking coordinates for", Coordinates$Observatory.ID[i], ":", Coordinates$Longitude[i], Coordinates$Latitude[i], "\n")
