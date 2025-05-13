@@ -6,8 +6,8 @@
 ### SETUP ###
 #############
 
-setwd("~/AlienDetective")
-source("src/functions.R")
+#setwd("~/AlienDetective")
+source("scripts/functions.R")
 
 # Reset graphics settings
 graphics.off()
@@ -38,12 +38,12 @@ output_dir <- args[5]  # Fifth argument: output directory
 
 # Set file paths
 if (length(args) == 0) {
-  species_location_path <- file.path("data", "Species_Location.csv")
-  location_coordinates_path <- file.path("data", "Coordinates.csv")
-  land_polygons_path <- file.path("data", "land_polygons.shp")
-  rasterized_path <- file.path("data", "rasterized_land_polygons.rds")
-  cost_matrix_path <- file.path("data", "cost_matrix.rds")
-  output_dir <- file.path("data", "output")
+  species_location_path <- file.path("Input", "Species_Location_NIS.csv")
+  location_coordinates_path <- file.path("Input", "Coordinates_NIS.csv")
+  land_polygons_path <- file.path("Input/land_polygons", "land_polygons.shp")
+  rasterized_path <- file.path("Input", "rasterized_land_polygons.rds")
+  cost_matrix_path <- file.path("Input", "cost_matrix.rds")
+  output_dir <- "Output"
 }
 
 # if (!file.exists(land_polygons_path) && !file.exists(rasterized_path)) {
@@ -51,17 +51,17 @@ if (length(args) == 0) {
 # }
 
 # Read species-location presence/absence matrix
-species_location <- read.csv(species_location_path)
+species_location <- read.csv(species_location_path, sep = ";")
 # If there are more than one row per species, remove all but the first row for each species
 species_location <- species_location[!duplicated(species_location[1]),]
 # Read table of coordinates for every location name (ObservatoryID)
-location_coordinates <- read.csv(location_coordinates_path)
+location_coordinates <- read.csv(location_coordinates_path, sep = ";")
 
 # INSERT LIST OF NATIVE SPECIES TO REMOVE NATIVE SPECIES FROM DF LIST
 
 # Subselect species to run the script for (optional). Can also be used to exclude species, e.g. known natives, by negating the which function
 species_subset <- c("Amphibalanus amphitrite")
-species_location <- species_location[which(species_location[1] %in% species_subset),]
+species_location <- species_location[which(species_location$Specieslist %in% species_subset),]
 #species_location <- species_location[c(2, 10, 57),] # Or subset a few species to try at random
 
 required_columns <- c("decimalLatitude", "decimalLongitude", "year", "month", "country")
@@ -79,7 +79,7 @@ if(file.exists(rasterized_path)) {
 } else {
   # Read vector map as sf object
   #land_polygons <- sf::st_read(land_polygons_path)
-  land_polygons <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+  land_polygons <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
   message(">>> [MAP] Rasterizing land polygons...")
   # Create raster
   r <- raster::raster(raster::extent(-180, 180, -90, 90), crs = sp::CRS("+init=EPSG:4326"), resolution = 0.1)
