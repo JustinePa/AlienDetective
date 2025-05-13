@@ -21,7 +21,9 @@ for (package in packages) {
   if(!requireNamespace(package, quietly = TRUE)) {
     install.packages(package)
   }
+  suppressPackageStartupMessages(library(package, character.only = TRUE))
 }
+
 # If installation fails for a package because it is "not available for your version of R", try installing from source
 # install.packages(package, pkgType = "source")
 # Install the rnaturalearthhires package for a higher-resolution vector map
