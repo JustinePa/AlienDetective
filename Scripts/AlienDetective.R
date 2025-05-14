@@ -123,7 +123,7 @@ for (i in 1:nrow(location_coordinates)) {
   loc_point <- SpatialPoints(cbind(longitude, latitude), proj4string = CRS(proj4string(r)))
   
   # Check if the point is on land or sea
-  if (!is.na(raster::extract(r, loc_point))) {
+  if (is.na(raster::extract(r, loc_point))) {
     message(loc_name, " is on land, searching for nearest sea point...")
     
     # Get the transition matrix (sparse)
@@ -134,7 +134,7 @@ for (i in 1:nrow(location_coordinates)) {
     connected_coords <- xyFromCell(r, connected_cells)
     
     # Keep only those that fall on sea
-    is_sea <- is.na(raster::extract(r, connected_coords))
+    is_sea <- raster::extract(r, connected_coords) == 1
     sea_coords <- connected_coords[is_sea, , drop = FALSE]
     
     if (nrow(sea_coords) == 0) {
@@ -150,7 +150,7 @@ for (i in 1:nrow(location_coordinates)) {
       new_coords <- sea_coords[nearest_idx, , drop = FALSE]
       loc_point <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
       
-      message(loc_name, " moved to nearest sea at: latitude ", new_coords[1], ", longitude ", new_coords[2])
+      message(loc_name, " moved to nearest sea at: latitude ", new_coords[2], ", longitude ", new_coords[1])
     }
   } else {
     message(loc_name, " is already in sea.")
