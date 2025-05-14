@@ -165,6 +165,34 @@ for (species in species_location[,1]) {
     }
   }
   
+  # Check if GBIF coordinates are in sea, if not, move to sea
+  message(">>> [GBIF] Ensuring that GBIF coordinates are in sea")
+  counter = 0
+  gbif_occurrences$latitude_moved <- NA
+  gbif_occurrences$longitude_moved <- NA
+  
+  for (i in 1:nrow(gbif_occurrences)) {
+    # Fetch latitude and longitude
+    gbif_latitude <- as.numeric(gsub(",", ".", gbif_occurrences$latitude[i]))
+    gbif_longitude <- as.numeric(gsub(",", ".", gbif_occurrences$longitude[i]))
+    
+    # Define the point
+    gbif_point <- sp::SpatialPoints(cbind(gbif_longitude, gbif_latitude), proj4string = sp::CRS(proj4string(r)))
+    
+    if (is_on_land(gbif_point)) {
+      moved_point <- move_to_sea(gbif_point)
+      counter <- counter + 1
+      
+      if (!is.null(moved_point)) {
+        # Update df with coordinates moved point
+        gbif_occurrences$latitude_moved[i] <- sp::coordinates(moved_point)[2]
+        gbif_occurrences$longitude_moved[i] <- sp::coordinates(moved_point)[1]
+      }
+    }
+  }
+  message(counter, " points on land were moved to sea for ", species)
+  write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+  
   for (location in colnames(species_location[,-1])) {
     # Skip locations where the species hasn't been detected, determined by a read number cutoff (default 1 read).
     # Ideally, data from multiple marker genes should have been compiled into a single presence/absence table before, so there should only be 1 or 0.
