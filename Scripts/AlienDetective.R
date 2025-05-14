@@ -194,6 +194,11 @@ for (species in species_location[,1]) {
       gbif_occurrences[,paste0(location, "_seaway")] <- NA
       gbif_occurrences[,paste0(location, "_geodesic")] <- NA
     }
+    if (!is.null(result$error_messages)) {
+      for (error in result$error_messages) {
+        message(error)
+      }
+    }
   }
   
   # Save to csv file
