@@ -120,48 +120,26 @@ for (i in 1:nrow(location_coordinates)) {
   message("Checking ", loc_name, ": latitude ", latitude, ", longitude ", longitude)
   
   # Define the point
-  loc_point <- SpatialPoints(cbind(longitude, latitude), proj4string = CRS(proj4string(r)))
+  inp_point <- sp::SpatialPoints(cbind(longitude, latitude), proj4string = sp::CRS(proj4string(r)))
   
-  # Check if the point is on land or sea
-  if (is.na(raster::extract(r, loc_point))) {
-    message(loc_name, " is on land, searching for nearest sea point...")
+  if (is_on_land(inp_point)) {
+    message(loc_name, " is on land, searching nearest sea coordinates...")
+    moved_point <- move_to_sea(inp_point)
     
-    # Get the transition matrix (sparse)
-    trans_matrix <- transitionMatrix(cost_matrix)
-    
-    # Get all cells that are connected (non-zero transitions)
-    connected_cells <- which(rowSums(trans_matrix != 0) > 0)
-    connected_coords <- xyFromCell(r, connected_cells)
-    
-    # Keep only those that fall on sea
-    is_sea <- raster::extract(r, connected_coords) == 1
-    sea_coords <- connected_coords[is_sea, , drop = FALSE]
-    
-    if (nrow(sea_coords) == 0) {
-      message("No valid connected sea cells found for ", loc_name)
+    if (is.null(moved_point)) {
+      message("No valid sea coordinates found for ", loc_name)
     } else {
-      # Compute geodesic distance to all valid sea coords
-      dists <- geosphere::distVincentySphere(coordinates(loc_point), sea_coords)
-      
-      # Find the index of the closest sea coordinate
-      nearest_idx <- which.min(dists)
-      
-      # Update point to the closest connected sea coordinate
-      new_coords <- sea_coords[nearest_idx, , drop = FALSE]
-      loc_point <- SpatialPoints(new_coords, proj4string = CRS(proj4string(r)))
-      
-      message(loc_name, " moved to nearest sea at: latitude ", new_coords[2], ", longitude ", new_coords[1])
+      # Update df with coordinates moved point
+      location_coordinates$Longitude[i] <- sp::coordinates(moved_point)[1]
+      location_coordinates$Latitude[i] <- sp::coordinates(moved_point)[2]
+      message("Updated ", loc_name, " to latitude ", location_coordinates$Latitude[i], ", longitude ", location_coordinates$Longitude[i])
     }
   } else {
-    message(loc_name, " is already in sea.")
+    message(loc_name, " is already in sea")
   }
-  
-  # Update the dataframe with the new coordinates (if moved)
-  location_coordinates$Longitude[i] <- coordinates(loc_point)[1]
-  location_coordinates$Latitude[i] <- coordinates(loc_point)[2]
   message("")
 }
-cat(">>> [DONE] All coordinates updated to nearest sea point")
+message(">>> [DONE] All coordinates updated to nearest sea point")
 
 #############################
 ### DISTANCES CALCULATION ###

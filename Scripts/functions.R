@@ -55,6 +55,38 @@ fetch_gbif_data <- function(species,
   }
 }
 
+# Function to check if point is on land (TRUE = land, FALSE = sea)
+is_on_land <- function(point) {
+  return(is.na(raster::extract(r, point)))
+}
+
+# Function to move point on land to sea
+move_to_sea <- function(point) {
+  # Get transition matrix & all connected cells
+  trans_matrix <- gdistance::transitionMatrix(cost_matrix)
+  connected_cells <- which(rowSums(trans_matrix != 0) > 0)
+  connected_coords <- raster::xyFromCell(r, connected_cells)
+  
+  # Filter to only retain those that fall on sea
+  is_sea <- raster::extract(r, connected_coords) == 1
+  sea_coords <- connected_coords[is_sea, , drop = FALSE]
+  
+  if (nrow(sea_coords) == 0) {
+    return(NULL)  # failure signal
+  } else {
+    # Compute geodesic distance to all valid sea coordinates
+    dists <- geosphere::distVincentySphere(sp::coordinates(point), sea_coords)
+    
+    # Find index of closest sea coordinate
+    nearest_idx <- which.min(dists)
+    
+    # Update point to closest sea coordinate
+    new_coords <- sea_coords[nearest_idx, , drop = FALSE]
+    point <- sp::SpatialPoints(new_coords, proj4string = sp::CRS(proj4string(r)))
+    return(point)
+  }
+}
+
 
 # Main function: calculates both sea route and geodesic distances from every downloaded GBIF occurrence to the species occurrence in question
 calculate.distances <- function(gbif_occurrences, latitude, longitude, raster_map, cost_matrix){
