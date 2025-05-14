@@ -173,8 +173,8 @@ for (species in species_location[,1]) {
     }
     
     # Get coordinates for the location of observation
-    latitude <- location_coordinates[which(location_coordinates$Observatory.ID == location), "Latitude"]
-    longitude <- location_coordinates[which(location_coordinates$Observatory.ID == location), "Longitude"]
+    latitude <- as.numeric(gsub(",", ".", location_coordinates[which(location_coordinates$Observatory.ID == location), "Latitude"]))
+    longitude <- as.numeric(gsub(",", ".", location_coordinates[which(location_coordinates$Observatory.ID == location), "Longitude"]))
     if (length(latitude) != 1 || length(longitude) != 1) {
       warning("Could not retrieve coordinates for location \"", location, "\"")
       next
