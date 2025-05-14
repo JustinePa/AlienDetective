@@ -100,7 +100,10 @@ calculate.distances <- function(gbif_occurrences, latitude, longitude, raster_ma
     
     # Create SpatialPoints objects from the coordinates
     query_point <- sp::SpatialPoints(cbind(longitude, latitude), proj4string = proj4_crs)
-    ref_points <- sp::SpatialPoints(cbind(gbif_occurrences$longitude, gbif_occurrences$latitude), proj4string = proj4_crs)
+    ref_points <- sp::SpatialPoints(cbind(ifelse(is.na(gbif_occurrences$longitude_moved), gbif_occurrences$longitude, gbif_occurrences$longitude_moved),
+                                          ifelse(is.na(gbif_occurrences$latitude_moved), gbif_occurrences$latitude, gbif_occurrences$latitude_moved)),
+                                    proj4string = proj4_crs)
+    
     
     # Get raster cell values of the GBIF occurrence points (1 for sea, Inf for land)
     cell_values <- raster::extract(raster_map, ref_points)
