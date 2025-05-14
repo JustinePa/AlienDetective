@@ -16,7 +16,7 @@ graphics.off()
 # That way it's easier to maintain the code and see which packages are actually required as development progresses, and you also avoid clashes between
 # package namespaces, making sure that the correct function is always used regardless of which other packages the user has installed and loaded.
 message(">>> [INIT] Checking for required packages...")
-packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata")
+packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata", "dplyr")
 for (package in packages) {
   if(!requireNamespace(package, quietly = TRUE)) {
     install.packages(package)
@@ -165,32 +165,41 @@ for (species in species_location[,1]) {
     }
   }
   
-  # Check if GBIF coordinates are in sea, if not, move to sea
-  message(">>> [GBIF] Ensuring that GBIF coordinates are in sea")
-  counter = 0
-  gbif_occurrences$latitude_moved <- NA
-  gbif_occurrences$longitude_moved <- NA
+  ## Check if GBIF coordinates are in sea, if not, move to sea ##
+  # Ensure numeric format
+  gbif_occurrences <- gbif_occurrences %>% mutate(latitude = as.numeric(gsub(",", ".", latitude)),
+                                                  longitude = as.numeric(gsub(",", ".", longitude)))
   
-  for (i in 1:nrow(gbif_occurrences)) {
-    # Fetch latitude and longitude
-    gbif_latitude <- as.numeric(gsub(",", ".", gbif_occurrences$latitude[i]))
-    gbif_longitude <- as.numeric(gsub(",", ".", gbif_occurrences$longitude[i]))
+  # Identify unique coordinate pairs
+  unique_coords <- gbif_occurrences %>% select(latitude, longitude) %>% distinct()
+  
+  # Initialize result columns
+  unique_coords$latitude_moved <- NA
+  unique_coords$longitude_moved <- NA
+  
+  counter <- 0
+  
+  # Process each unique coordinate only once
+  for (i in 1:nrow(unique_coords)) {
+    lat <- unique_coords$latitude[i]
+    lon <- unique_coords$longitude[i]
+    point <- sp::SpatialPoints(cbind(lon, lat), proj4string = sp::CRS(proj4string(r)))
     
-    # Define the point
-    gbif_point <- sp::SpatialPoints(cbind(gbif_longitude, gbif_latitude), proj4string = sp::CRS(proj4string(r)))
-    
-    if (is_on_land(gbif_point)) {
-      moved_point <- move_to_sea(gbif_point)
+    if (is_on_land(point)) {
+      moved_point <- move_to_sea(point)
       counter <- counter + 1
-      
-      if (!is.null(moved_point)) {
-        # Update df with coordinates moved point
-        gbif_occurrences$latitude_moved[i] <- sp::coordinates(moved_point)[2]
-        gbif_occurrences$longitude_moved[i] <- sp::coordinates(moved_point)[1]
-      }
+      unique_coords$latitude_moved[i] <- sp::coordinates(moved_point)[2]
+      unique_coords$longitude_moved[i] <- sp::coordinates(moved_point)[1]
+    } else {
+      unique_coords$latitude_moved[i] <- NA
+      unique_coords$longitude_moved[i] <- NA
     }
   }
-  message(counter, " points on land were moved to sea for ", species)
+  
+  # Join moved coordinates back to original data
+  gbif_occurrences <- gbif_occurrences %>% left_join(unique_coords, by = c("latitude", "longitude"))
+  
+  message(counter, " coordinates on land were moved to sea for ", species)
   write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   
   for (location in colnames(species_location[,-1])) {
@@ -233,7 +242,7 @@ for (species in species_location[,1]) {
   write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   message("")
 }
-
+print(Sys.time())
 
 ################
 ### PLOTTING ###
