@@ -166,6 +166,7 @@ for (species in species_location[,1]) {
   }
   
   ## Check if GBIF coordinates are in sea, if not, move to sea ##
+  message(">>> [GBIF] Ensuring GBIF coordinates are in sea")
   # Ensure numeric format
   gbif_occurrences <- gbif_occurrences %>% mutate(latitude = as.numeric(gsub(",", ".", latitude)),
                                                   longitude = as.numeric(gsub(",", ".", longitude)))
@@ -242,7 +243,6 @@ for (species in species_location[,1]) {
   write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   message("")
 }
-print(Sys.time())
 
 ################
 ### PLOTTING ###
