@@ -7,7 +7,7 @@
 #############
 
 #setwd("~/AlienDetective")
-source("scripts/functions.R")
+source("Scripts/functions.R")
 
 # Reset graphics settings
 graphics.off()
