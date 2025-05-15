@@ -16,7 +16,7 @@ graphics.off()
 # That way it's easier to maintain the code and see which packages are actually required as development progresses, and you also avoid clashes between
 # package namespaces, making sure that the correct function is always used regardless of which other packages the user has installed and loaded.
 message(">>> [INIT] Checking for required packages...")
-packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata", "dplyr")
+packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata", "dplyr", "spThin")
 for (package in packages) {
   if(!requireNamespace(package, quietly = TRUE)) {
     install.packages(package)
@@ -62,7 +62,7 @@ location_coordinates <- read.csv(location_coordinates_path, sep = ";")
 # INSERT LIST OF NATIVE SPECIES TO REMOVE NATIVE SPECIES FROM DF LIST
 
 # Subselect species to run the script for (optional). Can also be used to exclude species, e.g. known natives, by negating the which function
-species_subset <- c("Amphibalanus amphitrite")
+species_subset <- c("Amphibalanus eburneus")
 species_location <- species_location[which(species_location$Specieslist %in% species_subset),]
 #species_location <- species_location[c(2, 10, 57),] # Or subset a few species to try at random
 
@@ -162,6 +162,47 @@ for (species in species_location[,1]) {
     } else {
       # Skip species that have no GBIF records
       next
+    }
+  }
+  
+  # Thinning of occurences
+  message(">>> [GBIF] Thinning GBIF occurrences")
+  if (nrow(gbif_occurrences) < 10) {
+    
+    message("Less than 10 occurrences, saving without thinning.\n")
+    thinned_dataframe <- gbif_occurrences
+    
+  } else {
+    # Use spThin for spatial thinning
+    dataset_thin <- data.frame(
+      Species = species,  # Mandatory column for spThin
+      Longitude = gbif_occurrences$longitude,
+      Latitude = gbif_occurrences$latitude
+    )
+    
+    thin_result <- thin(
+      loc.data = dataset_thin,
+      lat.col = "Latitude",
+      long.col = "Longitude",
+      spec.col = "Species",
+      thin.par = 10,     # Thinning distance in km (adjust as needed)
+      reps = 1,          # Number of replicates
+      locs.thinned.list.return = TRUE,
+      write.files = FALSE,
+      verbose = TRUE
+    )
+    
+    # Extract thinned coordinates
+    if (length(thin_result) > 0 && nrow(thin_result[[1]]) > 0) {
+      thinned_coords <- thin_result[[1]]
+      thinned_dataframe <- dataset_thin %>%
+        semi_join(thinned_coords, by = c("Longitude", "Latitude")) %>%
+        mutate(occurrenceStatus = 1) %>%
+        select(-Species)
+      message(paste("Occurrences after thinning:", nrow(thinned_dataframe)))
+    } else {
+      message("Thinning failed or returned zero points. Saving original data.\n")
+      thinned_dataframe <- dataframe
     }
   }
   
