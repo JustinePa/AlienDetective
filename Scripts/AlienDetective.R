@@ -165,21 +165,24 @@ for (species in species_location[,1]) {
     }
   }
   
+  message(">>> [GBIF] Ensuring GBIF occurrence coordinates are at sea")
   unique_coords <- unique(gbif_occurrences[c("latitude", "longitude")])
   unique_coords$latitude_moved <- NA
   unique_coords$longitude_moved <- NA
   unique_coords$dist_moved <- NA
-  
+  counter <- 0
   for (i in 1:nrow(unique_coords)) {
     if (is_on_land(unique_coords$latitude[i], unique_coords$longitude[i])) {
       moved <- move_to_sea(unique_coords$latitude[i], unique_coords$longitude[i])
       if (!is.null(moved)) {
+        counter <- counter + 1
         unique_coords$latitude_moved[i] <-moved$coords[2]
         unique_coords$longitude_moved[i] <- moved$coords[1]
         unique_coords$dist_moved[i] <- round((moved$dist/1000), 2)
       }
     }
   }
+  message(counter, " of ", nrow(unique_coords), " coordinate pairs were moved to sea.")
 
 #!!! Need to add code to write to file, but not same file as GBIF data because other dimensions
   #write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
