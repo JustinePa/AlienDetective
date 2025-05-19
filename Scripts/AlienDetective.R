@@ -119,20 +119,18 @@ for (i in 1:nrow(location_coordinates)) {
   latitude <- as.numeric(gsub(",", ".", location_coordinates$Latitude[i]))  
   message("Checking ", loc_name, ": latitude ", latitude, ", longitude ", longitude)
   
-  # Define the point
-  inp_point <- sp::SpatialPoints(cbind(longitude, latitude), proj4string = sp::CRS(proj4string(r)))
-  
-  if (is_on_land(inp_point)) {
+  if (is_on_land(latitude, longitude)) {
     message(loc_name, " is on land, searching nearest sea coordinates...")
-    moved_point <- move_to_sea(inp_point)
+    moved <- move_to_sea(latitude, longitude)
     
-    if (is.null(moved_point)) {
+    if (is.null(moved)) {
       message("No valid sea coordinates found for ", loc_name)
     } else {
       # Update df with coordinates moved point
-      location_coordinates$Longitude[i] <- sp::coordinates(moved_point)[1]
-      location_coordinates$Latitude[i] <- sp::coordinates(moved_point)[2]
-      message("Updated ", loc_name, " to latitude ", location_coordinates$Latitude[i], ", longitude ", location_coordinates$Longitude[i])
+      location_coordinates$Longitude[i] <- moved$coords[1]
+      location_coordinates$Latitude[i] <- moved$coords[2]
+      dist <- round((moved$dist/1000), 2)
+      message("Updated ", loc_name, " to ", location_coordinates$Latitude[i], ", ", location_coordinates$Longitude[i], "; moved ", dist, " km.")
     }
   } else {
     message(loc_name, " is already in sea")
