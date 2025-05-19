@@ -202,17 +202,18 @@ for (species in species_location[,1]) {
     
     # Run the distance calculations
     message(">>> [DIST] Calculating distances to ", species, " occurrences from ", location)
-    result <- calculate.distances(gbif_occurrences = thinned_dataframe,
+    result <- calculate.distances(data = unique_coords,
                                   latitude = latitude,
                                   longitude = longitude,
                                   raster_map = r,
                                   cost_matrix = cost_matrix)
+    
     if (!(is.null(result$seaway) & is.null(result$geodesic))) {
-      gbif_occurrences[,paste0(location, "_seaway")] <- result$sea_distances
-      gbif_occurrences[,paste0(location, "_geodesic")] <- result$geodesic_distances
+      unique_coords[,paste0(location, "_seaway")] <- result$sea_distances
+      unique_coords[,paste0(location, "_geodesic")] <- result$geodesic_distances
     } else {
-      gbif_occurrences[,paste0(location, "_seaway")] <- NA
-      gbif_occurrences[,paste0(location, "_geodesic")] <- NA
+      unique_coords[,paste0(location, "_seaway")] <- NA
+      unique_coords[,paste0(location, "_geodesic")] <- NA
     }
     if (!is.null(result$error_messages)) {
       for (error in result$error_messages) {
@@ -220,9 +221,12 @@ for (species in species_location[,1]) {
       }
     }
   }
-  
-  # Save to csv file
-  #write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+  # Joining gbif_occurrences df & unique_coords df together
+  gbif_occurrences <- gbif_occurrences %>%
+    left_join(unique_coords, by = c("latitude", "longitude"))
+
+    # Save to csv file
+  write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   message("")
 }
 

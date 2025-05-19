@@ -111,10 +111,10 @@ move_to_sea <- function(lat, lon) {
 
 
 # Main function: calculates both sea route and geodesic distances from every downloaded GBIF occurrence to the species occurrence in question
-calculate.distances <- function(gbif_occurrences, latitude, longitude, raster_map, cost_matrix){
+calculate.distances <- function(data, latitude, longitude, raster_map, cost_matrix){
   
-  if (is.null(gbif_occurrences)) return(list(sea_distances = NULL, geodesic_distances = NULL, error_messages = "Input table is NULL"))
-  if (nrow(gbif_occurrences) < 1) return(list(sea_distances = NULL, geodesic_distances = NULL, error_messages = "Input table is has no entries"))
+  if (is.null(data)) return(list(sea_distances = NULL, geodesic_distances = NULL, error_messages = "Input table is NULL"))
+  if (nrow(data) < 1) return(list(sea_distances = NULL, geodesic_distances = NULL, error_messages = "Input table is has no entries"))
   
   tryCatch({
     # Specify the PROJ4 string for WGS84
@@ -122,8 +122,8 @@ calculate.distances <- function(gbif_occurrences, latitude, longitude, raster_ma
     
     # Create SpatialPoints objects from the coordinates
     query_point <- sp::SpatialPoints(cbind(longitude, latitude), proj4string = proj4_crs)
-    ref_points <- sp::SpatialPoints(cbind(ifelse(is.na(gbif_occurrences$longitude_moved), gbif_occurrences$longitude, gbif_occurrences$longitude_moved),
-                                          ifelse(is.na(gbif_occurrences$latitude_moved), gbif_occurrences$latitude, gbif_occurrences$latitude_moved)),
+    ref_points <- sp::SpatialPoints(cbind(ifelse(is.na(data$longitude_moved), data$longitude, data$longitude_moved),
+                                          ifelse(is.na(data$latitude_moved), data$latitude, data$latitude_moved)),
                                     proj4string = proj4_crs)
     
     
@@ -147,8 +147,8 @@ calculate.distances <- function(gbif_occurrences, latitude, longitude, raster_ma
       # Vecotrized geodesic distance calculation to all GBIF occurrences in the sea
       geodesic_distances[indexes] <- as.numeric(geodist::geodist(query_point_table, ref_points_sea_table, measure = "geodesic"))
       # Convert distances to kilometres
-      sea_distances <- sea_distances / 1000
-      geodesic_distances <- geodesic_distances / 1000
+      sea_distances <- round(sea_distances / 1000, 0)
+      geodesic_distances <- round(geodesic_distances / 1000, 0)
     }
     # Return result
     return(list(sea_distances = sea_distances, geodesic_distances = geodesic_distances, error_messages = NULL))
