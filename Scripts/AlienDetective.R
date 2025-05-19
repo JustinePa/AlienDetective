@@ -62,7 +62,7 @@ location_coordinates <- read.csv(location_coordinates_path, sep = ";")
 # INSERT LIST OF NATIVE SPECIES TO REMOVE NATIVE SPECIES FROM DF LIST
 
 # Subselect species to run the script for (optional). Can also be used to exclude species, e.g. known natives, by negating the which function
-species_subset <- c("Amphibalanus eburneus")
+species_subset <- c("Amphibalanus amphitrite")
 species_location <- species_location[which(species_location$Specieslist %in% species_subset),]
 #species_location <- species_location[c(2, 10, 57),] # Or subset a few species to try at random
 
@@ -165,84 +165,24 @@ for (species in species_location[,1]) {
     }
   }
   
-  # Thinning of occurences
-  message(">>> [GBIF] Thinning GBIF occurrences")
-  if (nrow(gbif_occurrences) < 10) {
-    
-    message("Less than 10 occurrences, saving without thinning.\n")
-    thinned_dataframe <- gbif_occurrences
-    
-  } else {
-    # Use spThin for spatial thinning
-    dataset_thin <- data.frame(
-      Species = species,  # Mandatory column for spThin
-      Longitude = gbif_occurrences$longitude,
-      Latitude = gbif_occurrences$latitude
-    )
-    
-    thin_result <- thin(
-      loc.data = dataset_thin,
-      lat.col = "Latitude",
-      long.col = "Longitude",
-      spec.col = "Species",
-      thin.par = 10,     # Thinning distance in km (adjust as needed)
-      reps = 1,          # Number of replicates
-      locs.thinned.list.return = TRUE,
-      write.files = FALSE,
-      verbose = TRUE
-    )
-    
-    # Extract thinned coordinates
-    if (length(thin_result) > 0 && nrow(thin_result[[1]]) > 0) {
-      thinned_coords <- thin_result[[1]]
-      thinned_dataframe <- dataset_thin %>%
-        semi_join(thinned_coords, by = c("Longitude", "Latitude")) %>%
-        mutate(occurrenceStatus = 1) %>%
-        select(-Species)
-      message(paste("Occurrences after thinning:", nrow(thinned_dataframe)))
-    } else {
-      message("Thinning failed or returned zero points. Saving original data.\n")
-      thinned_dataframe <- dataframe
-    }
-  }
-  
-  ## Check if GBIF coordinates are in sea, if not, move to sea ##
-  message(">>> [GBIF] Ensuring GBIF coordinates are in sea")
-  # Ensure numeric format
-  gbif_occurrences <- gbif_occurrences %>% mutate(latitude = as.numeric(gsub(",", ".", latitude)),
-                                                  longitude = as.numeric(gsub(",", ".", longitude)))
-  
-  # Identify unique coordinate pairs
-  unique_coords <- gbif_occurrences %>% select(latitude, longitude) %>% distinct()
-  
-  # Initialize result columns
+  unique_coords <- unique(gbif_occurrences[c("latitude", "longitude")])
   unique_coords$latitude_moved <- NA
   unique_coords$longitude_moved <- NA
+  unique_coords$dist_moved <- NA
   
-  counter <- 0
-  
-  # Process each unique coordinate only once
   for (i in 1:nrow(unique_coords)) {
-    lat <- unique_coords$latitude[i]
-    lon <- unique_coords$longitude[i]
-    point <- sp::SpatialPoints(cbind(lon, lat), proj4string = sp::CRS(proj4string(r)))
-    
-    if (is_on_land(point)) {
-      moved_point <- move_to_sea(point)
-      counter <- counter + 1
-      unique_coords$latitude_moved[i] <- sp::coordinates(moved_point)[2]
-      unique_coords$longitude_moved[i] <- sp::coordinates(moved_point)[1]
-    } else {
-      unique_coords$latitude_moved[i] <- NA
-      unique_coords$longitude_moved[i] <- NA
+    if (is_on_land(unique_coords$latitude[i], unique_coords$longitude[i])) {
+      moved <- move_to_sea(unique_coords$latitude[i], unique_coords$longitude[i])
+      if (!is.null(moved)) {
+        unique_coords$latitude_moved[i] <-moved$coords[2]
+        unique_coords$longitude_moved[i] <- moved$coords[1]
+        unique_coords$dist_moved[i] <- round((moved$dist/1000), 2)
+      }
     }
   }
-  
-  # Join moved coordinates back to original data
-  gbif_occurrences <- gbif_occurrences %>% left_join(unique_coords, by = c("latitude", "longitude"))
-  
-  message(counter, " coordinates on land were moved to sea for ", species)
-  write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+
+#!!! Need to add code to write to file, but not same file as GBIF data because other dimensions
+  #write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   
   for (location in colnames(species_location[,-1])) {
     # Skip locations where the species hasn't been detected, determined by a read number cutoff (default 1 read).
@@ -261,7 +201,7 @@ for (species in species_location[,1]) {
     
     # Run the distance calculations
     message(">>> [DIST] Calculating distances to ", species, " occurrences from ", location)
-    result <- calculate.distances(gbif_occurrences = gbif_occurrences,
+    result <- calculate.distances(gbif_occurrences = thinned_dataframe,
                                   latitude = latitude,
                                   longitude = longitude,
                                   raster_map = r,
@@ -281,7 +221,7 @@ for (species in species_location[,1]) {
   }
   
   # Save to csv file
-  write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+  #write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   message("")
 }
 
