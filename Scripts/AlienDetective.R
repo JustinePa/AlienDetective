@@ -6,6 +6,9 @@
 ### SETUP ###
 #############
 
+# Set CRAN mirror for downloading packages on server
+# options(repos = c(CRAN = "https://cloud.r-project.org"))
+
 #setwd("~/AlienDetective")
 source("Scripts/functions.R")
 
@@ -223,7 +226,7 @@ for (species in species_location[,1]) {
   }
   # Joining gbif_occurrences df & unique_coords df together
   gbif_occurrences <- gbif_occurrences %>%
-    left_join(unique_coords, by = c("latitude", "longitude"))
+    dplyr::left_join(unique_coords, by = c("latitude", "longitude"))
 
     # Save to csv file
   write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
