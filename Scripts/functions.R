@@ -56,35 +56,57 @@ fetch_gbif_data <- function(species,
 }
 
 # Function to check if point is on land (TRUE = land, FALSE = sea)
-is_on_land <- function(point) {
+is_on_land <- function(lat, lon) {
+  point <- sp::SpatialPoints(cbind(lon, lat), proj4string = sp::CRS(proj4string(r)))
   return(is.na(raster::extract(r, point)))
 }
 
 # Function to move point on land to sea
-move_to_sea <- function(point) {
+move_to_sea <- function(lat, lon) {
   # Get transition matrix & all connected cells
   trans_matrix <- gdistance::transitionMatrix(cost_matrix)
   connected_cells <- which(rowSums(trans_matrix != 0) > 0)
   connected_coords <- raster::xyFromCell(r, connected_cells)
   
-  # Filter to only retain those that fall on sea
+  # Filter to only retain sea cells
   is_sea <- raster::extract(r, connected_coords) == 1
   sea_coords <- connected_coords[is_sea, , drop = FALSE]
   
   if (nrow(sea_coords) == 0) {
     return(NULL)  # failure signal
-  } else {
-    # Compute geodesic distance to all valid sea coordinates
-    dists <- geosphere::distVincentySphere(sp::coordinates(point), sea_coords)
+  } 
+  
+  point_coords <- c(lon, lat)
+  
+  for (radius_km in seq(5, 100, 5)) {
+    radius_deg <- radius_km / 111 # rough conversion km to degrees
     
-    # Find index of closest sea coordinate
-    nearest_idx <- which.min(dists)
+    # Borders filter box
+    lon_min <- lon - radius_deg
+    lon_max <- lon + radius_deg
+    lat_min <- lat - radius_deg
+    lat_max <- lat + radius_deg
     
-    # Update point to closest sea coordinate
-    new_coords <- sea_coords[nearest_idx, , drop = FALSE]
-    point <- sp::SpatialPoints(new_coords, proj4string = sp::CRS(proj4string(r)))
-    return(point)
+    # Define sea cells within radius
+    sea_in_radius <- which (sea_coords[,1] >= lon_min & sea_coords[,1] <= lon_max &
+                            sea_coords[,2] >= lat_min & sea_coords[,2] <= lat_max)
+    
+    if (length(sea_in_radius) > 0) {
+      sea_coords_radius <- sea_coords[sea_in_radius, , drop = FALSE]
+      dists <- geosphere::distVincentySphere(point_coords, sea_coords_radius)
+      
+      # return nearest seapoint
+      nearest_idx <- which.min(dists)
+      dist <- dists[nearest_idx]
+      new_coords <- sea_coords_radius[nearest_idx, , drop = FALSE]
+      return(list(
+        coords = as.vector(new_coords),
+        dist = dist
+      ))
+    }
+    # Otherwise, continues with next larger radius
   }
+  return(NULL) # when no sea point found
 }
 
 
