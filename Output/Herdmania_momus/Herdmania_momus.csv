@@ -1,0 +1,5 @@
+"latitude","longitude","year","month","country","basisOfRecord","latitude_moved","longitude_moved","dist_moved","Crete_seaway","Crete_geodesic","Limfjord_seaway","Limfjord_geodesic"
+37.544711,22.820038,2025,4,"Greece","HUMAN_OBSERVATION",37.55,22.75,6.21,327,325,5834,2378
+43.50449,3.89671,2018,8,"France","HUMAN_OBSERVATION",43.45,3.85000000000001,7.14,2110,2035,4365,1541
+35.343153,25.136605,NA,NA,"Greece","OCCURRENCE",NA,NA,NA,0,0,5948,2684
+56.90155,9.055167,NA,NA,"Denmark","OCCURRENCE",NA,NA,NA,5948,2684,0,0

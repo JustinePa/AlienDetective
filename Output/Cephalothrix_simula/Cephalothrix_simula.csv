@@ -1,0 +1,7 @@
+"latitude","longitude","year","month","country","basisOfRecord","latitude_moved","longitude_moved","dist_moved","BelgiumCoast_seaway","BelgiumCoast_geodesic","Crete_seaway","Crete_geodesic","RavennaH_seaway","RavennaH_geodesic"
+42.562848,-8.988179,2013,5,"Spain","HUMAN_OBSERVATION",NA,NA,NA,1447,1341,3803,3042,4001,1733
+48.72872,-3.95894,2018,NA,"France","OCCURRENCE",NA,NA,NA,605,586,4629,2805,4828,1334
+48.72872,-3.95894,2018,NA,"France","OCCURRENCE",NA,NA,NA,605,586,4629,2805,4828,1334
+35.343153,25.136605,NA,NA,"Greece","OCCURRENCE",NA,NA,NA,5233,2499,0,0,1528,1486
+35.343153,25.136605,NA,NA,"Greece","OCCURRENCE",NA,NA,NA,5233,2499,0,0,1528,1486
+35.343153,25.136605,NA,NA,"Greece","OCCURRENCE",NA,NA,NA,5233,2499,0,0,1528,1486
