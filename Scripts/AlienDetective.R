@@ -19,7 +19,7 @@ graphics.off()
 # That way it's easier to maintain the code and see which packages are actually required as development progresses, and you also avoid clashes between
 # package namespaces, making sure that the correct function is always used regardless of which other packages the user has installed and loaded.
 cat(">>> [INIT] Checking for required packages...\n")
-packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata", "dplyr", "spThin")
+packages <- c("rgbif", "sf", "sp", "gdistance", "geodist", "raster", "fasterize", "ggplot2", "rnaturalearth", "rnaturalearthdata", "dplyr", "spThin", "foreach", "doParallel")
 for (package in packages) {
   if(!requireNamespace(package, quietly = TRUE)) {
     install.packages(package)
@@ -64,13 +64,19 @@ location_coordinates <- read.csv(location_coordinates_path, sep = ";")
 
 # INSERT LIST OF NATIVE SPECIES TO REMOVE NATIVE SPECIES FROM DF LIST
 
-# Subselect species to run the script for (optional). Can also be used to exclude species, e.g. known natives, by negating the which function
-species_subset <- c("Amphibalanus amphitrite")
+# # Subselect species to run the script for (optional). Can also be used to exclude species, e.g. known natives, by negating the which function
+species_subset <- c("Potamopyrgus antipodarum")
 species_location <- species_location[which(species_location$Specieslist %in% species_subset),]
 #species_location <- species_location[c(2, 10, 57),] # Or subset a few species to try at random
 
 required_columns <- c("decimalLatitude", "decimalLongitude", "year", "month", "country")
 
+#############################
+### Setup parallelisation ###
+#############################
+
+cluster <- makeCluster(4)
+registerDoParallel(cluster)
 
 #########################
 ### MAP CONFIGURATION ###
@@ -147,7 +153,16 @@ cat(">>> [DONE] All coordinates updated to nearest sea point\n")
 ### DISTANCES CALCULATION ###
 #############################
 
-for (species in species_location[,1]) {
+# Use "foreach" loop for parallel execution,
+# use "for" loop for non-parallel execution
+
+# for (species in species_location[,1]) {
+foreach(species = species_location[,1],
+        .export = c("is_on_land", "move_to_sea", "species_location", 
+                    "location_coordinates", "r", "cost_matrix", 
+                    "fetch_gbif_data", "calculate.distances", 
+                    "required_columns", "output_dir"),
+        .packages = c("dplyr", "raster", "sp", "gdistance", "geodist")) %dopar% {
   species_dir <- file.path(output_dir, gsub(" ", "_", species))
   gbif_occurrences_file <- file.path(species_dir, paste0(gsub(" ", "_", species), ".csv"))
   if (file.exists(gbif_occurrences_file)) {
@@ -244,6 +259,8 @@ for (species in species_location[,1]) {
 }
 
 cat(">>> [DONE] Finished calculating distances for all species.")
+
+stopCluster(cluster)
 
 ################
 ### PLOTTING ###
