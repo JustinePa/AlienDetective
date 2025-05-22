@@ -207,9 +207,6 @@ foreach(species = species_location[,1],
     cat("Moving to sea failed for", counter_failed, "coordinate pairs\n")
     message("Species ", species, ": moving to sea failed for ", counter_failed, " coordinate pairs.")
   }
-
-#!!! Need to add code to write to file, but not same file as GBIF data because other dimensions
-  #write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
   
   for (location in colnames(species_location[,-1])) {
     # Skip locations where the species hasn't been detected, determined by a read number cutoff (default 1 read).
@@ -260,88 +257,3 @@ foreach(species = species_location[,1],
 cat(">>> [DONE] Finished calculating distances for all species.")
 
 stopCluster(cluster)
-
-################
-### PLOTTING ###
-################
-
-# library("ggplot2")
-# required_columns <- c("latitude", "longitude", "year", "month", "country", "basisOfRecord")
-# 
-# # Iterate over species for which a csv file exists
-# for (species in species_location[,1]) {
-#   species_ <- gsub(" ", "_", species)
-#   species_dir <- file.path(output_dir, species_)
-#   if (file.exists(file.path(species_dir, paste0(species_, ".csv")))) {
-#     distance_df <- read.csv(file.path(species_dir, paste0(species_, ".csv")))
-#   } else {
-#     warning("No output directory found for species \"", species, "\". Skipping plotting.")
-#     next
-#   }
-#   
-#   # Iterate over locations in that csv file
-#   for (location in unique(gsub("_seaway|_geodesic", "", colnames(distance_df[,-which(colnames(distance_df) %in% required_columns)])))) {
-#     
-#     ### BELOW PART IS UNFINISHED
-#     
-#     seaway_df <- distance_df[,c(required_columns, paste0(location, "_seaway"))]
-#     seaway_df <- reshape(seaway_df,
-#                          varying   = vals,           # the columns to stack
-#                          v.names   = "value",        # name of the value column
-#                          timevar   = "variable",     # name of the column that will hold the former column names
-#                          times     = vals,           # the values to put in that new “variable” column
-#                          idvar     = "Specieslist",  # keep Specieslist as your ID
-#                          direction = "long")
-#     
-#     both_df <- distance_df[,c(required_columns, paste0(location, "_geodesic"))]
-#     both_df <- reshape(both_df,
-#                        varying   = vals,           # the columns to stack
-#                        v.names   = "value",        # name of the value column
-#                        timevar   = "variable",     # name of the column that will hold the former column names
-#                        times     = vals,           # the values to put in that new “variable” column
-#                        idvar     = "Specieslist",  # keep Specieslist as your ID
-#                        direction = "long")
-#     
-#     # Add distance type column, used by plot.dist.both function
-#     seaway_df$type <- "seaway"
-#     # Assign year categories
-#     year_categories <- c("1965-1985", "1985-1990", "1990-1995",
-#                          "1995-2000", "2000-2005", "2005-2010",
-#                          "2010-2015", "2015-2020", "2020-2025")
-#     seaway_df$year_category <- sapply(seaway_df$year, assign_year_category(year_categories = year_categories))
-#     both_df$year_category <- sapply(both_df$year, assign_year_category(year_categories = year_categories))
-#     # clean dataframe from rows with Inf in them
-#     seaway_df <- seaway_df[is.finite(seaway_df$Koster_seaway), ]
-#     # select only distances below 40000km
-#     seaway_df <- subset(seaway_df, Koster_seaway < 40000)
-#     
-#     plot <- plot.dist.sea(
-#       species = species,
-#       location = location,
-#       distances = seaway_df,
-#       output_dir = species_dir
-#     )
-#     
-#     plot <- plot.dist.both(
-#       species = species,
-#       location = location,
-#       distances = both_df,
-#       output_dir = species_dir
-#     )
-#     
-#     plot <- plot.dist.by.country(
-#       species = species,
-#       location = location,
-#       distances = seaway_df,
-#       output_dir = species_dir
-#     )
-#     
-#     plot <- plot.dist.by.year(
-#       species = species,
-#       location = location,
-#       distances = seaway_df,
-#       output_dir = species_dir
-#     )
-#     
-#   }
-# }
