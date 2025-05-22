@@ -6,6 +6,12 @@
 ### SETUP ###
 #############
 
+# Define number of cores 
+num_cores <- 4
+if (!is.numeric(num_cores) || num_cores <= 0 || num_cores != floor(num_cores)) {
+  stop("Number of cores must be a whole number!")
+}
+
 # Set CRAN mirror for downloading packages on server
 # options(repos = c(CRAN = "https://cloud.r-project.org"))
 
@@ -70,13 +76,6 @@ species_location <- species_location[which(species_location$Specieslist %in% spe
 #species_location <- species_location[c(2, 10, 57),] # Or subset a few species to try at random
 
 required_columns <- c("decimalLatitude", "decimalLongitude", "year", "month", "country")
-
-#############################
-### Setup parallelisation ###
-#############################
-
-cluster <- makeCluster(4)
-registerDoParallel(cluster)
 
 #########################
 ### MAP CONFIGURATION ###
@@ -153,15 +152,15 @@ cat(">>> [DONE] All coordinates updated to nearest sea point\n")
 ### DISTANCES CALCULATION ###
 #############################
 
-# Use "foreach" loop for parallel execution,
-# use "for" loop for non-parallel execution
+# For non-parallel execution -> use "for" loop
+# For parallel execution -> use "foreach" loop + parallel setup
+
+# Setup parallelisation
+cluster <- makeCluster(num_cores)
+registerDoParallel(cluster)
 
 # for (species in species_location[,1]) {
 foreach(species = species_location[,1],
-        .export = c("is_on_land", "move_to_sea", "species_location", 
-                    "location_coordinates", "r", "cost_matrix", 
-                    "fetch_gbif_data", "calculate.distances", 
-                    "required_columns", "output_dir"),
         .packages = c("dplyr", "raster", "sp", "gdistance", "geodist")) %dopar% {
   species_dir <- file.path(output_dir, gsub(" ", "_", species))
   gbif_occurrences_file <- file.path(species_dir, paste0(gsub(" ", "_", species), ".csv"))
