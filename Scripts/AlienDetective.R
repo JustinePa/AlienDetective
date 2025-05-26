@@ -6,7 +6,7 @@
 ### SETUP ###
 #############
 
-# Define number of cores 
+# Define number of cores  (place in comments for use on Windows OS)
 num_cores <- 4
 if (!is.numeric(num_cores) || num_cores <= 0 || num_cores != floor(num_cores)) {
   stop("Number of cores must be a whole number!")
@@ -155,7 +155,7 @@ cat(">>> [DONE] All coordinates updated to nearest sea point\n")
 # For non-parallel execution -> use "for" loop
 # For parallel execution -> use "foreach" loop + parallel setup
 
-# Setup parallelisation
+# Setup parallelisation (place in comments for use on Windows OS)
 cluster <- makeCluster(num_cores)
 registerDoParallel(cluster)
 
@@ -256,4 +256,5 @@ foreach(species = species_location[,1],
 
 cat(">>> [DONE] Finished calculating distances for all species.")
 
+# Close the cluster   (place in comments for use on Windows OS)
 stopCluster(cluster)
