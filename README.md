@@ -1,45 +1,74 @@
-# AlienDetective
-Species of maritime fauna all over the world are known to travel great distances in the oceans and seas. The goal of this workflow is to be able to detect them by calculating sea distances (going around land) from a sample location to the occurrence data from this species (from GBIF). This workflow focuses on occurrence data in Europe.
-![logo3](https://github.com/IrisVP/AlienDetective/assets/151626670/21dd7508-bd81-448a-a096-db07bace2515)
-### Input
+# AlienDetective  
+Species of maritime fauna all over the world are known to travel great distances accross oceans and seas. The goal of this workflow is to detect these species by calculating sea distances (traveling around land) and geodesic distances (shortest route) from sample locations to the occurrence data gathered from [GBIF](https://www.gbif.org/). This workflow focuses specifically on occurrence data within Europe.  
+![logo3](https://github.com/IrisVP/AlienDetective/assets/151626670/21dd7508-bd81-448a-a096-db07bace2515)  
 
-In the 'Input' folder, there are examples of input files necessary for this workflow. 
-The files are in .csv format:
-- Coordinates.csv: Contains the names of the samplelocations in the column 'Observatory.ID', along with their latitudes and longitudes. <br />
-- Metadata.csv: Contains metadata per sample, including sample region, country, latitudes, longitudes, sample dates, etc. Note: Metadata should be prepared for personal use in this workflow. The 'Coordinates.csv' file is an example of this preparation. <br />
-- Species_Location.csv: Contains a 'Specieslist' column with all the species names. The other columns are sample location names, with the data in these columns representing the number of samples taken from a species for a specific location.<br />
+## Input  
 
-Note: The Coordinates.csv and Species_Location.csv files should be prepared exactly like the examples for use in 1_Calculation_sea_distances.R.
+The `Input` folder contains the input files required for running the main script `AlienDetective.R.`  
 
-### Short description of R scripts
+### Required files:  
+- **`Species_Location_NIS.csv`**: Contains a `Specieslist` column with the species names. Other columns correspond to sample location names, where `0` means the species is absent and `1` means it is present at that location.  
+- **`Coordinates_NIS.csv`**: Contains sample location names (matching those in `Species_location_NIS.csv`) along with their latitude and longitude coordinates.  
+*Need to add something about the preparation of these files?*  
 
-For detailed documentation: see the 'Documentation' directory for .Rmd files
+### Generated files:  
+These files are created by the script if they are not already present in the `Input` folder. Once generated, they are saved in the `Input` folder for reuse in future runs.  
+- `rasterized_land_polygons.rds`: Rasterized world map.  
+- `cost_matrix.rds`: Matrix indicating the cost values for land and sea cells.  
 
-#### 1_Calculation_sea_distances.R
-/!\ Run this on a server. This is computationally expensive. <br />
+>‼️**Note:** If any parameters related to generating the above files are changed, please delete the existing files in the `Input` folder so they can be regenerated with updated parameters.  
 
-1. Download and install libraries, then load data.
-2. Retrieve occurrence data from GBIF, focusing on Europe. The settings for fetching data can be personalized here.
-3. Calculate distances: both flying and sea distances are calculated and saved in files inside the 'Output_calculations' directory.
+## Scripts  
+The `Scripts` folder contains the following scripts:  
 
-##### Output
-The output are two directories in the 'Output_calculations' directory named 'sea_distances' and 'fly_distances'. Separate csv files are made for each organism and their corresponding samplelocation name.
+### `AlienDetective.R`  
+This is the main script that:  
+- Fetches species occurrence data from GBIF.  
+- Calculates sea and geodesic distences.  
+- Generates plots for all species listed in species file.  
 
-#### 2_Visualisation_distribution.R
+⚠️ This script is computationally intensive, especially when processing many species or species with large GBIF datasets. Running it on a server is recommended.  
+- Unix-based operating systems support multi-core processing, which can be adjusted by setting `num_cores <- <number_of_cores>` at the top of the script.  
+- Windows OS supports only single-core processing. To avoid errors or crashes, lines enabling parallel execution should be removed or commented out, comments in the script indicate what changes are needed.  
 
-Histograms are created showing the frequencies of species occurrences per sample location and species. These graphs are saved in the 'Output_calculations' directory, with a separate directory for each type of graph:
+Usage with command-line arguments:  
+| **Argument #** | **Description**                   |  
+| -------------- | ------------------------          |  
+| 1              | Path to species CSV file          |  
+| 2              | Path to coordinates CSV file      |  
+| 3              | Path to rasterized world map [^1] |  
+| 4              | Path to cost matrix [^1]          |  
+| 5              | Path to output directory          |  
 
-1. The first graph shows the sea distances per species and sample location.
-2. The second graph is a combined graph of flying distances and sea distances.
-3. The third graph is similar to the first graph but colored by country.
-4. The fourth graph is also similar to the first graph but colored by year category.
+[^1] When these files don't exist, they will be generated by the script.  
 
-Patterns can be observed in these histograms. The x-axis represents distances in km, and the y-axis represents frequency. An alien species can be detected when there is a spike in frequency at a large distance. Using the country plot, the origin region of the species can be identified. Using the year plot, the year in which the species migrated to that location can be determined.
+If no arguments are passes, paths can be manually set inside the script.  
 
-#### 1_Preparation.R
+Workflow steps of the script:  
+1. **Input data** - Reads species and coordinate CSV files. You can optionally subset species by modifying or uncommenting the line: `species_subset <- c("<species>")`.  
+2. **Map configuration** - Loads or generates rasterized world map and cost matrix.  
+3. **Input coordinate check** - Checks if the input coordinates are located in sea. If not, they are moved to the neasest sea cell.  
+4. **Distances calculation** - For each species present in sample locations:  
+    - Downloads GBIF occurrences and saves to CSV.  
+    - Checks if GBIF points are in the sea, moves them if necessary.  
+    - Calculates sea route and geodesic distance to sample location, rounding to the neasest kilometer.  
+    - *Plotting of the distances*  
 
-This script is located in the directory called 'Preparation_BOLDigger'. This script can be used when files from the BOLDigger workflow are used. Be sure to check if the headers of your files are the same as the example BOLDigger file in 'Input'. 
+### `functions.R`  
+This script contains helper functions used by `AlienDetective.R`:  
+- **`fetch_gbif_data`** - Fetches and formats GBIF occurrence data (latitude, longitude, year, month, country, basisOfRecord). Current settings focus on Europe, but can be customized.  
+- **`is_on_land`** - Returns `TRUE` if a point (latitude/longitude) lies on land, otherwise `FALSE`.  
+- **`move_to_sea`** - Finds the nearest sea cell to a given point and returns new coordinates along with the moved distance (km). Limits how far a point can be moved by using a radius sequence: `for (radius_km in seq(<min>, <max>, <step>))`.  
+- **`calculate.distances`** - Calculates both sea-route and geodesic distances.  
+- *Plotting functions*.  
 
-### /!\ Warnings /!\
+### `Compile_presence_absence_matrix.R`  
+This script prepares the data in the correct format for `AlienDetective.R`.  
+*Is this still needed?*  
 
-The distance to a location inside a bay or canal next to the coast line will most likely not be calculated. The world map used in the calculation does not have a good enough resolution to differentiate bays or canals from land areas. If you want calculation to these locations, place the coordinates outwards in the sea or ocean. Fresh water sources are also not included in these calculations.
+## Output  
+The `Output` folder contains the result from running `AlienDetective.R`. For each species in species_location CSV, a folder is created containing CSV files with sea and geodesic distances from GBIF occurrences to sample locations.  
+
+## Note about map  
+The map does not include inland freshwater bodies, and the coastline may not be fully accurate. To handle points located inside bays, canals, or near coastlines, coordinates are adjusted to the nearest sea cell when necessary. The adjusted coordinates and the moved distance (km) are saved in the output csv file.  
+Due to movement limits, points that are located far inland may return `NA` of `Inf` for distance values. If such points need to be included, you can increase the maximum radius in the `move_to_sea` function to suit your needs.  
