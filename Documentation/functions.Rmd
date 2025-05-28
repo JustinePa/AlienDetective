@@ -1,0 +1,123 @@
+---
+title: "functions.Rmd"
+author: "Matthijs Gielen"
+date: "2025-05-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+This document provides an overview of the functions defined in the `functions.R` script. This script is intended to be used in conjuction with the main script **`AlienDetective.R`**.  
+
+The `functions.R` script includes the following functions:  
+- `fetch_gbif_data()`  
+- `is_on_land()`  
+- `move_to_sea()`  
+- `calculate.distances()`  
+
+---  
+
+# Function `fetch_gbif_data()`  
+
+This `fetch_gbif_data()` function retrieves occurrence data from GBIF for a specified species.  
+## Arguments  
+
+The function allows customization through several arguments:  
+- `species`: The scientific name of the species.  
+- `hasCoordinate`: If `TRUE`, only return records with coordinates.  
+- `continent`: Filters results by continent.  
+- `basisOfRecord`: Specifies desired record types.  
+- `fields`: Column names to include in the result.  
+- `limit`: Maximum number of results to fetch.  
+- `output_dir`: Directory where output (if saved) would be stored.  
+
+>**Note:** Refer to the  [`occ_search`](https://docs.ropensci.org/rgbif/reference/occ_data.html?q=occ_search) documentation for full details on accepted parameter values.  
+
+## Function Definition
+
+```{r}
+fetch_gbif_data <- function(species,
+                            hasCoordinate = TRUE,
+                            continent = "europe",
+                            basisOfRecord = c("OBSERVATION", "MACHINE_OBSERVATION", "HUMAN_OBSERVATION", "MATERIAL_SAMPLE", "LIVING_SPECIMEN", "OCCURRENCE"),
+                            fields = c("decimalLatitude", "decimalLongitude", "year", "month", "country"),
+                            limit = 10000,
+                            output_dir) {
+  # Actual code in function (see next blocks)
+}
+```
+
+>The logic of the function is split into sections to explain each step of the function.  
+
+## Step 1: Download GBIF Data  
+
+This step uses the parameters above to request occurrence data from the GBIF API via the `rgbif::occ_search()` function.  
+
+```{r}
+data_list <- rgbif::occ_search(scientificName = species,
+                               hasCoordinate = TRUE,
+                               continent = continent,
+                               basisOfRecord = basisOfRecord,
+                               fields = fields,
+                               limit = limit)
+```
+
+## Step 2: Prepare and Combine Records  
+
+We initialize an empty data frame, then iterate over the downloaded records to:  
+- Skip empty or missing entries  
+- Fill in any missing columns with `NA`  
+- Combine all valid entries into one final data frame (`res`)  
+
+```{r}
+# Initialise the empty data frame
+res <- data.frame()
+
+# Loop over each data frame in the list
+for (i in seq_along(data_list)) {
+  # Skip the basis of record(s) that have no data
+  if (is.null(data_list[[i]]$data)) {
+    next
+  } else if (nrow(data_list[[i]]$data) == 0) {
+    next
+  }
+  
+  # Replace missing values with "NA"
+  missing_columns <- setdiff(fields, colnames(data_list[[i]]$data))
+  if (length(missing_columns) > 0) {
+    for (col in missing_columns) {
+      data_list[[i]]$data[col] <- NA
+    }
+  }
+  
+  # Concatenate into 1 data frame
+  data_list[[i]]$data$basisOfRecord <- names(data_list)[i]
+  res <- rbind(res, data_list[[i]]$data)
+}
+```
+
+## Step 3: Final Formatting and Return  
+
+This step formats the final data frame and filters out incomplete records.  
+
+```{r}
+if (nrow(res) > 0) {
+  # Reorder columns by order in fields argument
+  res <- res[, c(fields, "basisOfRecord")]
+  
+  # Rename latitude & longitude columns
+  colnames(res)[colnames(res) == "decimalLatitude"] <- "latitude"
+  colnames(res)[colnames(res) == "decimalLongitude"] <- "longitude"
+  
+  # Remove occurrences where longitude or latitude is "NA"
+  res <- res[!is.na(res$latitude) & !is.na(res$longitude),]
+  return(res)
+} else {
+  error_message <- paste0("No GBIF records found for species \"", species, "\"")
+  message(error_message)
+  return(NULL)
+}
+```
+
