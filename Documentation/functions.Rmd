@@ -1,19 +1,21 @@
 ---
-title: "functions.Rmd"
+title: "Documentation functions.R"
 author: "Matthijs Gielen"
 date: "2025-06-02"
 output: 
   html_document:
+    number_sections: true
     toc: true
     toc_depth: 3
     toc_float: true
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
-This document provides an overview of the functions defined in the `functions.R` script. This script supports the main script **`AlienDetective.R`** by defining costum functions.  
+This document provides an overview of the functions defined in the `functions.R` script. This script supports the main script **`AlienDetective.R`** by defining custom functions.  
 
 The `functions.R` script includes the following functions:  
 
@@ -58,7 +60,7 @@ fetch_gbif_data <- function(species,
 
 >The logic of the function is split into sections to explain each step of the function.  
 
-## Step 1: Download GBIF Data  
+## Download GBIF Data  
 
 This step uses the parameters above to request occurrence data from the GBIF API via the `rgbif::occ_search()` function.  
 
@@ -71,7 +73,9 @@ data_list <- rgbif::occ_search(scientificName = species,
                                limit = limit)
 ```
 
-## Step 2: Prepare and Combine Records  
+## Step-by-step logic  
+
+### Prepare and Combine Records  
 
 We initialize an empty data frame, then iterate over the downloaded records to:  
 
@@ -106,7 +110,7 @@ for (i in seq_along(data_list)) {
 }
 ```
 
-## Step 3: Final Formatting and Return  
+### Final Formatting and Return  
 
 This step formats the final data frame and filters out incomplete records.  
 
@@ -180,7 +184,9 @@ move_to_sea <- function(lat, lon) {
 }
 ```
 
-## Step 1: Identify all sea cells
+## Step-by-step logic  
+
+### Identify all sea cells  
 
 The function starts by extracting a transition matrix from the cost raster and identifying all connected (non-barrier) cells. Then it filters these to retain only those that represent sea, which are identified by raster values of `1`.  
 
@@ -200,7 +206,7 @@ if (nrow(sea_coords) == 0) {
 ```
 
 
-## Step 2: Search for the nearest sea cell  
+### Search for the nearest sea cell  
 
 The function defines a square search area around the input point, effectively a box approximation of circular search, since distance is converted into degrees (using an approximate conversion of 1 degree ≈ 111 km.  
 It starts with a radius of 5 km and increases the search radius in steps of 5 km (up to a maximum of 100 km) until it finds at least one suitable sea cell.  
@@ -288,7 +294,7 @@ If the input data is missing (`NULL`) or empty, or an error occurs during proces
 
 ## Step-by-step logic  
 
-### Step 1: Initial checks  
+### Initial checks  
 
 The function first checks if the `data` is valid. If it's `NULL` or empty, it returns early with appropriate messages.  
 
@@ -297,7 +303,7 @@ if (is.null(data)) return(list(sea_distances = NULL, geodesic_distances = NULL, 
 if (nrow(data) < 1) return(list(sea_distances = NULL, geodesic_distances = NULL, error_messages = "Input table is has no entries"))
 ```
 
-### Step 2: Prepare coordinates  
+### Prepare coordinates  
 
 Creates `SpatialPoints` for the observation from the coordinates csv and the GBIF points (using possibly moved coordinates if available).  
 
@@ -316,7 +322,7 @@ tryCatch({
 })
 ```
 
-### Step 3: Filter points in the sea  
+### Filter points in the sea  
 
 Using the raster map, the function identifies which GBIF points are at sea (`raster value == 1`). These are the only ones considered for sea distance calculations. Result vectors for both sea distance and geodesic distance are initialized.  
 
@@ -335,7 +341,7 @@ tryCatch({
 })
 ```
 
-### Step 4: Distance calculations  
+### Distance calculations  
 
 Both of the distances are only calculated when a point at sea has been found.  
 
@@ -369,7 +375,7 @@ tryCatch({
 })
 ```
 
-### Step 5: Return result  
+### Return result  
 
 Returns a list with the calculated vectors. If an error occurs, a descriptive error message is returned instead. 
 
