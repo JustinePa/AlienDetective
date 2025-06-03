@@ -1,7 +1,7 @@
 ---
 title: "Documentation AlienDetective.R"
 author: "Matthijs Gielen"
-date: "2025-06-02"
+date: "2025-06-03"
 output: 
   html_document:
     toc: true
@@ -117,7 +117,7 @@ if (length(args) == 0) {
 
 ## Reading input data  
 
-### Species-location presence/absence matrix  
+### Species presence/absence matrix  
 
 The script reads the presence/absence matrix from a csv file.  
 If a species appears more than once, only the first occurrence is kept.  
@@ -151,14 +151,26 @@ required_columns <- c("decimalLatitude", "decimalLongitude", "year", "month", "c
 
 # Map configuration  
 
-The script uses 2 objects to define the world and the values of each cell:  
+The script uses two key spatial objects to define the world used for the calculations:  
 
 - `r`: A rasterized map of the world.  
-- `cost_matrix`: A matrix that defines if a cell in land (`NA`) or sea (`1`).  
+- `cost_matrix`: A matrix defining the traversable paths between raster cells, essentially representing sea travel costs.  
 
-Both the objects can be saved in .rds files to avoid regenerating them every time the script is runned. When the files are not present in the specified location, the files will be generated and saved. The code below checks whether the files exist, if so they are loaded. If not, they are generated and saved.  
+Both objects can be saved as `.rds` files to avoid regenerating them on every script run. The script first checks whether these files already exist at the specified locations (by default, inside the `Input` folder). If they exist, they are loaded. If not, the script generates and saved them.  
 
-- Rasterized map of the world:  
+>**Note:** If any of the parameters used to generate either of these files are changed, please **delete the existing `.rds` files** to allow the script to regenerate them with the adjusted parameters.  
+
+- **Rasterized map of the world:**  
+This section loads a high-resolution vector map of all countries using the `ne_countries()` function from the `rnaturalearth` package. This provides detailed country shapes in the form of a spatial data frame (`sf` object). A global raster grid is then created, covering the entire Earth. The grid's resolution can be adjusted to control the size of each cell (smaller cells give finer detail).  
+Next, the script overlays the raster on the vector map using the `fasterize` package. By default, `fasterize` assigns a value of `1` to land cells and leaves sea cells as `NA`. However, for the purpose of this script, the values are reversed:  
+  - Land = `NA` -> Non-traversable  
+  - Sea = `1` -> Traversable  
+
+  Additionally, the script offers flexibility to use a custom shapefile to define land areas instead of using the default `rnaturalearth` data. To do this:
+  1. **Uncomment** the following line and provide the corect path to your shapefile:  
+  `# land_polygons <- sf::st_read(land_polygons_path)`  
+  2. **Comment out or remove** the following line to prevent overwriting your custom data:  
+  `land_polygons <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf')`  
 
 ```{r}
 cat(">>> [MAP] Loading world map...\n")
@@ -183,6 +195,12 @@ if(file.exists(rasterized_path)) {
 ```
 
 - Cost matrix:  
+The cost matrix represents how easily each sea cell in the raster can be reached from its neighboring cells. This is essential for calculating the least-cost paths between 2 locations.  
+If the file already exists, it is simply loaded. Otherwise, the script constructs the matrix using the `gdistance` package. This is done in two steps:  
+  1. *Transision matrix construction*  
+  The function `transition()` creates a transition object based on the rasterized map. It used a `transitionFunction`, in this case `mean`, which calculates the transition value between neighboring cells as the average of their values. Since land is `NA`, any transition involving land will be `NA`, making it impassable. The `directions = 16` paramerer allows movement to adjacent and diagonal cells, enabling more realistic movement across the grid.  
+  2. *Geographic correction*  
+  The `geoCorrection()` function adjusts the transition values based on real-world distances. This step is crucial because raster cells vary in physical size depending on their latitude (the closer to the pole, the narrower the cells). Without this correction, distance estimates would be geographically distorted.  
 
 ```{r}
 if (file.exists(cost_matrix_path)) {
@@ -200,4 +218,255 @@ if (file.exists(cost_matrix_path)) {
 }
 ```
 
+---  
+
+# Check input coordinates file  
+
+Due to the map's limited resolution, certain geographical locations may be incorrectly classified as land, even though they are in the sea.  
+This issue most commonly occurs near coastlines, where raster cell boundaries are more sensitive to slight positional changes.  
+Additionally, points located in inland water bodies are typically marked as land in the raster. These inland points may be shifted significantly when adjusted, so users should manually verify whether to include or exclude such observations.  
+
+The script loops each row in the `location_coordinates` data frame (read from the input coordinates csv file) and performes the following steps:  
+
+1. Extracts the location name, its longitude and latitude values, converting them from character strings to numeric format.    
+2. Uses the `is_on_land()` function to determine whether the location is on land based on the rasterized map.  
+3. If the location is on land, the `move_to_sea()` function attempts to move the point to the nearest sea cell.  
+4. If a valid sea coordinate is found, it replaces the original coordinates in the `location_coordinates` data frame.  
+
+>**Note:** The functions `is_on_land()` and `move_to_sea()` are defined in `Scripts/functions.R` and are documented in [`Documentation/functions.html`](functions.html). Please refer to these documents for additional details or customization options.  
+
+```{r}
+# Check if input coordinates are in sea, if not, move them to sea
+cat(">>> [COORD] Checking if input coordinates are in sea ...\n")
+for (i in 1:nrow(location_coordinates)) {
+  loc_name <- location_coordinates$Observatory.ID[i]
+  longitude <- as.numeric(gsub(",", ".", location_coordinates$Longitude[i]))
+  latitude <- as.numeric(gsub(",", ".", location_coordinates$Latitude[i]))  
+  cat("Checking", loc_name,": latitude", latitude, ", longitude", longitude, "\n")
+  
+  if (is_on_land(latitude, longitude)) {
+    cat(loc_name, "is on land, searching nearest sea coordinates...\n")
+    moved <- move_to_sea(latitude, longitude)
+    
+    if (is.null(moved)) {
+      cat("No valid sea coordinates found\n")
+      message(loc_name, " is on land, no valid sea coordinates found")
+    } else {
+      # Update df with coordinates moved point
+      location_coordinates$Longitude[i] <- moved$coords[1]
+      location_coordinates$Latitude[i] <- moved$coords[2]
+      dist <- round((moved$dist/1000), 2)
+      cat("Updated", loc_name, "to", location_coordinates$Latitude[i], ", ", location_coordinates$Longitude[i], "; moved", dist, "km.\n")
+    }
+  } else {
+    cat(loc_name, "is already in sea\n")
+  }
+  cat("\n")
+}
+cat(">>> [DONE] All coordinates updated to nearest sea point\n")
+```
+
+---  
+
+# Distances calculation  
+
+This section of the script is responsible for calculating distances between known observation locations (from the species-location input CSV) and all GBIF occurrences of each species. Two types of distances are calculated:  
+
+- **Sea distance:** Distance over water, avoiding land cells (using the cost matrix).  
+- **Geodesic distance:** The shortest path, allowing travel over land.  
+
+## Parallelisation (optional)  
+
+On **Unix-based** operating systems, it is possible to speed up the script by enabling parallel processing across multiple CPU cores.  
+To enable this, set the `num_cores` variable at the top of the script, and initialize the cluster as follows:    
+
+```{r}
+cluster <- makeCluster(num_cores)
+registerDoParallel(cluster)
+```
+
+Next, replace the standard `for` loop with `foreach`, and make sure the function ends with `return(TRUE)` to suppress printing `NULL` to the terminal or output log:  
+
+```{r}
+foreach(species = species_location[,1],
+        .packages = c("dplyr", "raster", "sp", "gdistance")) %dopar% {
+  
+  # Actual code goes here (see steps below)  
+  
+  return(TRUE)
+}
+```
+
+After the loop finishes, stop the cluster by placing the following line **after** the closing `}` of the `foreach` block:  
+
+```{r}
+stopCluster(cluster)
+```
+
+
+## Step-by-step distance calculation process 
+
+The script loops over each species listed in the `species_location` data frame (read from the species-location input CSV) and performs a series of tasks for each species. These steps are described in detail below.
+
+### Step 1: Download or load GBIF data  
+
+The scripts checks if GBIF data for the species already exists as a CSV file in the output directory. If not, it uses the `fetch_GBIF_data()` function to download the data from GBIF and save it locally.  
+
+```{r}
+for (species in species_location[,1]) {
+  species_dir <- file.path(output_dir, gsub(" ", "_", species))
+  gbif_occurrences_file <- file.path(species_dir, paste0(gsub(" ", "_", species), ".csv"))
+  if (file.exists(gbif_occurrences_file)) {
+    cat(">>> [GBIF] Loading GBIF data for", species, "\n")
+    gbif_occurrences <- read.csv(gbif_occurrences_file, header = TRUE)
+  } else {
+    cat(">>> [GBIF] Fetching GBIF data for", species, "\n")
+    gbif_occurrences <- fetch_gbif_data(species, fields = required_columns)
+    if (!is.null(gbif_occurrences)) {
+      if (!dir.exists(species_dir)) {
+        dir.create(species_dir, recursive = TRUE)
+      }
+      write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+    } else {
+      # Skip species that have no GBIF records
+      return(NULL)
+    }
+  }
+  
+  # ...
+}
+```
+
+### Step 2: Remove duplicate coordinates  
+
+Different GBIF occurrences can share the same coordinate pairs (same latitude and longitude). To avoid redundant calculations, the script copies the `gbif_occurrences` data frame to a new data frame `unique_coords` that retains only unique latitude-longitude combinations.  
+
+```{r}
+for (species in species_location[,1]) {
+  # ...
+  
+  unique_coords <- unique(gbif_occurrences[c("latitude", "longitude")])
+  
+  # ...
+}
+```
+
+### Step 3: Ensure GBIF points are in the sea  
+
+Just as with the coordinate from the coordinate input csv file, we have to make sure that the GBIF coordinates points to a point that is considered sea by the used map. Each point in `unique_coords` is checked using `is_on_land()`. If a point is on land, `move_to_sea()` tries to find the nearest sea cell. The coordinates in `unique_coords` are updated to the coordinates of the nearest sea cell.  
+
+```{r}
+for (species in species_location[,1]) {
+  # ...
+  
+  cat(">>> [GBIF] Ensuring GBIF occurrence coordinates are at sea\n")
+  counter_moved <- 0
+  counter_failed <- 0
+  for (i in 1:nrow(unique_coords)) {
+    if (is_on_land(unique_coords$latitude[i], unique_coords$longitude[i])) {
+      moved <- move_to_sea(unique_coords$latitude[i], unique_coords$longitude[i])
+      if (!is.null(moved)) {
+        counter_moved <- counter_moved + 1
+        unique_coords$latitude_moved[i] <-moved$coords[2]
+        unique_coords$longitude_moved[i] <- moved$coords[1]
+        unique_coords$dist_moved[i] <- round((moved$dist/1000), 2)
+      }
+      else {
+        counter_failed <- counter_failed + 1
+      }
+    }
+  }
+  cat(counter_moved, "of", nrow(unique_coords), "coordinate pairs were moved to sea.\n")
+  if (counter_failed != 0) {
+    cat("Moving to sea failed for", counter_failed, "coordinate pairs\n")
+    message("Species ", species, ": moving to sea failed for ", counter_failed, " coordinate pairs.")
+  }
+  
+  # ...
+}
+```
+
+### Step 4: Calculate distances to all observation locations  
+
+For each observation location where the species was detected, the script calculates sea and geodesic distances from all GBIF points. The results are added to `unique_coords` as two new columns per location:  
+
+- `location_seaway`  
+- `location_geodesic`  
+
+```{r}
+for (species in species_location[,1]) {
+  # ...
+
+  for (location in colnames(species_location[,-1])) {
+    # Skip locations where the species hasn't been detected, determined by a read number cutoff (default 1 read).
+    if (species_location[which(species_location[,1] == species), location] < 1) {
+      next
+    }
+    
+    # Get coordinates for the location of observation
+    latitude <- as.numeric(gsub(",", ".", location_coordinates[which(location_coordinates$Observatory.ID == location), "Latitude"]))
+    longitude <- as.numeric(gsub(",", ".", location_coordinates[which(location_coordinates$Observatory.ID == location), "Longitude"]))
+    if (length(latitude) != 1 || length(longitude) != 1) {
+      message("Could not retrieve coordinates for location \"", location, "\"")
+      next
+    }
+    
+    # Run the distance calculations
+    cat(">>> [DIST] Calculating distances to", species, "occurrences from", location, "\n")
+    result <- calculate.distances(data = unique_coords,
+                                  latitude = latitude,
+                                  longitude = longitude,
+                                  raster_map = r,
+                                  cost_matrix = cost_matrix)
+    
+    if (!(is.null(result$seaway) & is.null(result$geodesic))) {
+      unique_coords[,paste0(location, "_seaway")] <- result$sea_distances
+      unique_coords[,paste0(location, "_geodesic")] <- result$geodesic_distances
+    } else {
+      unique_coords[,paste0(location, "_seaway")] <- NA
+      unique_coords[,paste0(location, "_geodesic")] <- NA
+    }
+    if (!is.null(result$error_messages)) {
+      message("Errors in calculation for species: ", species, "\n")
+      for (error in result$error_messages) {
+        message(error)
+      }
+    }
+  }
+  
+  # ...
+}
+```
+
+### Step 5: Merge back to original GBIF data  
+
+The updated `unique_coords` (with moved coordinates and distances) is merged back into the original `gbif_occurrences` data frame.  
+
+```{r}
+for (species in species_location[,1]) {
+  # ...
+  
+  # Joining gbif_occurrences df & unique_coords df together
+  gbif_occurrences <- gbif_occurrences %>%
+    dplyr::left_join(unique_coords, by = c("latitude", "longitude"))
+  
+  # ...
+}
+```
+
+### Step 6: Save final output  
+
+The final data frame is written to a CSV file named after the species. The output file is saved in the corresponding species folder under the `Output/` directory.  
+
+```{r}
+for (species in species_location[,1]) {
+  # ...
+
+  # Save to csv file
+  write.csv(gbif_occurrences, file = gbif_occurrences_file, row.names = FALSE)
+  cat("\n")
+}
+```
+
+>**Note:** The functions `is_on_land()`, `move_to_sea()` `fetch_GBIF_data()` and `calculate.distances()` are defined in `Scripts/functions.R` and are documented in [`Documentation/functions.html`](functions.html). Please refer to these documents for additional details or customization options.  
 
