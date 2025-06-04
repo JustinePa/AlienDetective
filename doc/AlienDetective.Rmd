@@ -1,6 +1,6 @@
 ---
 title: "Documentation AlienDetective.R"
-author: "Matthijs Gielen"
+author: "Niels Vandepopuliere & Matthijs Gielen"
 date: "2025-06-03"
 output: 
   html_document:

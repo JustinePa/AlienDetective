@@ -1,6 +1,6 @@
 ---
 title: "Documentation functions.R"
-author: "Matthijs Gielen"
+author: "Niels Vandepopuliere & Matthijs Gielen"
 date: "2025-06-02"
 output: 
   html_document:
