@@ -11,7 +11,7 @@
 #SBATCH --mail-type=ALL
 
 # Load required modules
-module load PDC
+module load PDCOLD/23.12
 module load R/4.4.1-cpeGNU-23.12
 module load proj
 module load gdal
@@ -32,4 +32,4 @@ export RSTUDIO=0
 cd /cfs/klemming/home/m/mattgiel/AlienDetective
 
 # Run the R script with arguments
-Rscript /cfs/klemming/home/m/mattgiel/AlienDetective/Scripts/AlienDetective.R
+Rscript /cfs/klemming/home/m/mattgiel/AlienDetective/src/AlienDetective.R
