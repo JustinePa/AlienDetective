@@ -1,4 +1,4 @@
-Modification compared to MGielen/AlienDetective: 
+### !!! Modification compared to MGielen/AlienDetective: 
 fetch gbif data using geometry instead of continent --> draws a defined polygon over Europe instead of getting only records that included "Europe" (which would lead to missing data)
 
 # AlienDetective  
