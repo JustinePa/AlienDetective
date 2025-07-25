@@ -4,7 +4,7 @@
 
 fetch_gbif_data <- function(species,
                             hasCoordinate = TRUE,
-                            continent = "europe",
+                            polygon = "POLYGON((-30 81, 50 81, 50 12, -30 12, -30 81))",
                             basisOfRecord = c("OBSERVATION", "MACHINE_OBSERVATION", "HUMAN_OBSERVATION", "MATERIAL_SAMPLE", "LIVING_SPECIMEN", "OCCURRENCE"),
                             fields = c("decimalLatitude", "decimalLongitude", "year", "month", "country"),
                             limit = 10000,
@@ -12,7 +12,7 @@ fetch_gbif_data <- function(species,
   
   data_list <- rgbif::occ_search(scientificName = species,
                                  hasCoordinate = hasCoordinate,
-                                 continent = continent,
+                                 polygon = polygon,
                                  basisOfRecord = basisOfRecord,
                                  fields = fields,
                                  limit = limit
