@@ -1,3 +1,6 @@
+Modification compared to MGielen/AlienDetective: 
+fetch gbif data using geometry instead of continent --> draws a defined polygon over Europe instead of getting only records that included "Europe" (which would lead to missing data)
+
 # AlienDetective  
 Species of maritime fauna all over the world are known to travel great distances accross oceans and seas. The goal of this workflow is to detect these species by calculating sea distances (traveling around land) and geodesic distances (shortest route) from sample locations to the occurrence data gathered from [GBIF](https://www.gbif.org/). This workflow focuses specifically on occurrence data within Europe.  
 ![logo3](https://github.com/IrisVP/AlienDetective/assets/151626670/21dd7508-bd81-448a-a096-db07bace2515)  
