@@ -12,7 +12,7 @@ fetch_gbif_data <- function(species,
   
   data_list <- rgbif::occ_search(scientificName = species,
                                  hasCoordinate = hasCoordinate,
-                                 polygon = polygon,
+                                 geometry = polygon,
                                  basisOfRecord = basisOfRecord,
                                  fields = fields,
                                  limit = limit
